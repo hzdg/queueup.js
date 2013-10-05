@@ -1,0 +1,39 @@
+{
+  "name": "queueup.js",
+  "version": "0.0.0",
+  "description": "A promise-based JavaScript asset loader.",
+  "main": "queueup.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "grunt": "~0.4.1"
+  },
+  "devDependencies": {
+    "mocha": "~1.13.0",
+    "coffee-script": "~1.6.3",
+    "grunt-cli": "~0.1.9",
+    "grunt-contrib-coffee": "~0.7.0",
+    "grunt-contrib-watch": "~0.5.3",
+    "grunt-mocha": "~0.4.1"
+  },
+  "scripts": {
+    "prepublish": "grunt build",
+    "test": "grunt mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/matthewwithanm/queueup.js.git"
+  },
+  "keywords": [
+    "javascript",
+    "browser",
+    "load",
+    "loadqueue"
+  ],
+  "author": "Matthew Tretter <m@tthewwithanm.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/matthewwithanm/queueup.js/issues"
+  }
+}
