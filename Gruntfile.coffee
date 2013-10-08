@@ -12,7 +12,7 @@ module.exports = (grunt) ->
         ]
     mocha:
       all:
-        src: ['test/**/*.html'],
+        src: ['test/**/*.html', '!test/assets/**'],
         options:
           run: true
           log: true

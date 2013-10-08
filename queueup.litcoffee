@@ -15,6 +15,18 @@
       img.src = item.url
       null
 
+    loadHtml = (item) ->
+      xhr = new XMLHttpRequest
+      xhr.onreadystatechange = ->
+        if xhr.readyState == 4
+          if xhr.status == 200
+            item.deferred.resolve xhr.responseText
+          else
+            item.deferred.reject xhr.status
+      xhr.open 'GET', item.url, true
+      xhr.send()
+      null
+
     boundFns = (obj) ->
       result = {}
       for k, v of obj
@@ -51,8 +63,10 @@ managing the timing of the loading of assets.
         simultaneous: 6  # The maximum number of items to load at once
         loaders:
           image: loadImage
+          html: loadHtml
         extensions:
           image: ['png', 'jpg', 'jpeg', 'gif']
+          html: ['html']
 
       constructor: (opts) ->
         @queue = []
