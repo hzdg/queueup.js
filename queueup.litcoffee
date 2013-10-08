@@ -9,15 +9,36 @@
           target[k] = v
       target
 
-    class ImageLoader
+    loadImage = (item) ->
+      img = new Image
+      img.onload = -> item.deferred.resolve img
+      img.src = item.url
+      null
+
+    boundFns = (obj) ->
+      result = {}
+      for k, v of obj
+        if typeof v is 'function' and k[0] != '_'
+          result[k] = (args...) -> v.apply obj, args
+      result
+
+    extendPromise = (oldPromise, sources...) ->
+      oldThen = oldPromise.then
+      extend oldPromise, sources...,
+        then: (args...) ->
+          extendPromise oldThen.apply(this, args), sources...
 
     Deferred = (opts) ->
       factory = opts.factory
       loadQueue = opts.loadQueue
       assetId = opts.assetId
-      extend factory(),
-        promote: -> loadQueue._promote assetId
-        cancel: -> loadQueue._cancel assetId
+
+      deferred = factory()
+      oldPromise = deferred.promise
+      extend deferred,
+        promise: -> @_promise ?= extendPromise oldPromise.call(this), boundFns(loadQueue),
+          promote: -> loadQueue._promote assetId
+          cancel: -> loadQueue._cancel assetId
 
 
 The LoadQueue is the workhorse for queueup. It's the object responsible for
@@ -29,7 +50,7 @@ managing the timing of the loading of assets.
         autostart: false
         simultaneous: 6  # The maximum number of items to load at once
         loaders:
-          image: ImageLoader
+          image: loadImage
         extensions:
           image: ['png', 'jpg', 'jpeg', 'gif']
 
@@ -59,27 +80,26 @@ managing the timing of the loading of assets.
         this
 
       _cancel: (assetId) ->
-        @_remove(assetId)
-        this
+        !!@_remove(assetId)
 
       _loadNext: ->
         return unless @loading.length < @options.simultaneous
-        next = @queue.shift()
-        @_loadNow next
-        @_loadNext()  # Keep calling recursively until we're loading the max we can.
+        if next = @queue.shift()
+          @_loadNow next
+          @_loadNext()  # Keep calling recursively until we're loading the max we can.
 
       _loadNow: (item) ->
         @loading.push item
         loader = @getLoader item
-        # actually load it here
+        loader item
 
       getType: (item) ->
-        unless type = item.type
-          ext = item.url?.match(EXT_RE)?[1].toLowerCase()
-          type = @extensions
+        return item.type if item?.type?
+        ext = item.url?.match(EXT_RE)?[1].toLowerCase()
+        for k, v of @options.extensions
+          return k if ext in v
 
-      getLoader: (item) ->
-        @options.loaders[@getType item]
+      getLoader: (item) -> @options.loaders[@getType item]
 
       _add: (method, urlOrOpts, opts) ->
         item =
@@ -96,16 +116,19 @@ managing the timing of the loading of assets.
         @_loadNext() if @options.autostart
         item.deferred.promise()
 
-      append: (urlOrOpts, opts) ->
-        @_add 'push', urlOrOpts, opts
+      load: (args...) -> @append args...
 
-      prepend: (url, opts) ->
-        @_add 'unshift', urlOrOpts, opts
+      append: (urlOrOpts, opts) -> @_add 'push', urlOrOpts, opts
+
+      prepend: (url, opts) -> @_add 'unshift', urlOrOpts, opts
+
+      start: ->
+        @_loadNext()
+        this
 
 
-The queueup module itself is also an alias for the master queue's `append()`
-method.
+The queueup module itself is the master load queue.
 
-    masterQueue = new LoadQueue
-    @queueup = (args...) -> masterQueue.append.apply masterQueue, args...
+
+    @queueup = new LoadQueue
     @queueup.LoadQueue = LoadQueue

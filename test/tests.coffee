@@ -1,8 +1,7 @@
-describe 'a suite of tests', ->
-  @timeout 5000
+describe 'the master queue', ->
 
-  it 'should take less than 500ms', (done) ->
-    setTimeout done, 300
-
-  it 'should take less than 500ms as well', (done) ->
-    setTimeout done, 200
+  it 'should load a PNG', (done) ->
+    queueup
+      .load('hzlogo.png')
+      .then(-> done())
+      .start()

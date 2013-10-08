@@ -33,3 +33,4 @@ module.exports = (grunt) ->
   # Define tasks.
   grunt.registerTask 'build', ['coffee']
   grunt.registerTask 'default', ['build']
+  grunt.registerTask 'test', ['mocha']

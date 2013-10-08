@@ -9,11 +9,14 @@
   <body>
     <div id="mocha"></div>
     <script src="mocha.js"></script>
+    <script src="jquery.js"></script>
     <script src="../queueup.js"></script>
     <script>mocha.setup('bdd')</script>
     <script src="tests.js"></script>
     <script>
-      mocha.run();
+      if (navigator.userAgent.indexOf('PhantomJS') < 0) {
+        mocha.run();
+      }
     </script>
   </body>
 </html>
