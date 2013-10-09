@@ -39,26 +39,28 @@
           result[k] = (args...) -> v.apply obj, args
       result
 
-    extendPromise = (oldPromise, sources...) ->
-      promise = extend oldPromise, sources...
-      for fn in ['then', 'done', 'fail']
-        do (fn) ->
-          oldFn = oldPromise[fn]
-          promise[fn] = (args...) ->
-            extendPromise oldFn.apply(this, args), sources...
-      promise
+The LoadResult is the result of calling `load()`. It implements a promise API.
 
-    Deferred = (opts) ->
-      factory = opts.factory
-      loadQueue = opts.loadQueue
-      item = opts.item
+    class LoadResult
+      constructor: (loadQueue, promise) ->
+        extend this, boundFns(loadQueue)
+        for fn in ['then', 'fail', 'done']
+          do (fn) =>
+            @[fn] = (args...) ->
+              promise[fn] args...
+              this
+      promote: ->
+      cancel: ->
 
-      deferred = factory()
-      oldPromise = deferred.promise
-      extend deferred,
-        promise: -> @_promise ?= extendPromise oldPromise.call(this), boundFns(loadQueue),
-          promote: -> loadQueue._promote item.assetId
-          cancel: -> loadQueue._cancel item.assetId
+A Group is a type of LoadResult.
+
+    class Group extends LoadResult
+      constructor: (loadResults, loadQueue, promise, resolve, reject) ->
+        super loadQueue, promise
+        @group = loadResults
+        $.when(@group...)
+          .done(resolve)
+          .fail(reject)
 
 
 The LoadQueue is the workhorse for queueup. It's the object responsible for
@@ -130,14 +132,14 @@ managing the timing of the loading of assets.
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
-        deferred = Deferred {item, loadQueue: this, factory: @options.Deferred}
+        deferred = @options.Deferred()
         extend item,
           assetId: counter += 1
           reject: (args...) -> deferred.reject args...
           resolve: (args...) -> deferred.resolve args...
         @queue[method] item
         @_loadNext() if @options.autostart
-        deferred.promise()
+        new LoadResult this, deferred.promise()
 
       # TODO: Take option to prepend instead of append?
       load: (args...) -> @append args...
