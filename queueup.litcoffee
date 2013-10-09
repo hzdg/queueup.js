@@ -120,6 +120,7 @@ managing the timing of the loading of assets.
         ext = item.url?.match(EXT_RE)?[1].toLowerCase()
         for k, v of @options.extensions
           return k if ext in v
+        throw new Error "Couldn't determine type of #{ item.url }"
 
       getLoader: (item) -> @options.loaders[@getType item]
 
