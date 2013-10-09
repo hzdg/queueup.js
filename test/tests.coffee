@@ -1,3 +1,6 @@
+assert = chai.assert
+
+
 describe 'the master queue', ->
 
 describe 'a queue', ->
