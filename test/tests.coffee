@@ -19,10 +19,12 @@ describe 'a queue', ->
 
   it 'should error for nonexistent assets', (done) ->
     queueup()
-      .load('assets/DOES-NOT-EXIST')
+      .load('assets/DOES-NOT-EXIST.jpg')
       .done ->
         done new Error 'Promise was resolved'
-      .fail -> done()
+      .fail ->
+        done()
+      .start()
 
   it 'should load HTML', (done) ->
     queueup()

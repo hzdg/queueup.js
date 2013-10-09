@@ -42,7 +42,7 @@
     extendPromise = (oldPromise, sources...) ->
       promise = extend oldPromise, sources...
       for fn in ['then', 'done', 'fail']
-        do ->
+        do (fn) ->
           oldFn = oldPromise[fn]
           promise[fn] = (args...) ->
             extendPromise oldFn.apply(this, args), sources...
