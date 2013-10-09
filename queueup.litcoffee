@@ -149,8 +149,10 @@ managing the timing of the loading of assets.
         this
 
 
-The queueup module itself is the master load queue.
+The queueup module itself is the master load queue, as well as a factory for
+other load queues.
 
 
-    @queueup = new LoadQueue
-    @queueup.LoadQueue = LoadQueue
+    @queueup = (args...) -> new LoadQueue args...
+    extend @queueup, new LoadQueue, LoadQueue: LoadQueue
+    LoadQueue.call @queueup
