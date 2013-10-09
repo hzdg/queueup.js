@@ -138,6 +138,7 @@ managing the timing of the loading of assets.
         @_loadNext() if @options.autostart
         item.deferred.promise()
 
+      # TODO: Take option to prepend instead of append?
       load: (args...) -> @append args...
 
       append: (urlOrOpts, opts) -> @_add 'push', urlOrOpts, opts
