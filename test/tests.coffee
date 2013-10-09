@@ -44,6 +44,18 @@ describe 'a queue', ->
         .then(-> done())
       .start()
 
+  it 'should load in the correct order', (done) ->
+    complete = {}
+    queueup()
+      .load('assets/1.png')
+        .then ->
+          assert.isFalse complete.asset2
+          complete.asset1 = true
+      .load('assets/2.png')
+        .then ->
+          assert.isTrue complete.asset1
+          done()
+
   it 'should be able to promote assets', (done) ->
     queueup()
       .load('assets/1.png')
