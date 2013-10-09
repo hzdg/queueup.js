@@ -13,10 +13,10 @@
       img = new Image
       img.onload = ->
         if ('naturalWidth' of this and (@naturalWidth + @naturalHeight == 0)) or (@width + @height == 0)
-          item.deferred.reject()
+          item.reject()
         else
-          item.deferred.resolve img
-      img.onerror = -> item.deferred.reject()
+          item.resolve img
+      img.onerror = item.reject
       img.src = item.url
       null
 
@@ -25,9 +25,9 @@
       xhr.onreadystatechange = ->
         if xhr.readyState == 4
           if xhr.status == 200
-            item.deferred.resolve xhr.responseText
+            item.resolve xhr.responseText
           else
-            item.deferred.reject xhr.status
+            item.reject xhr.status
       xhr.open 'GET', item.url, true
       xhr.send()
       null
@@ -51,14 +51,14 @@
     Deferred = (opts) ->
       factory = opts.factory
       loadQueue = opts.loadQueue
-      assetId = opts.assetId
+      item = opts.item
 
       deferred = factory()
       oldPromise = deferred.promise
       extend deferred,
         promise: -> @_promise ?= extendPromise oldPromise.call(this), boundFns(loadQueue),
-          promote: -> loadQueue._promote assetId
-          cancel: -> loadQueue._cancel assetId
+          promote: -> loadQueue._promote item.assetId
+          cancel: -> loadQueue._cancel item.assetId
 
 
 The LoadQueue is the workhorse for queueup. It's the object responsible for
@@ -130,14 +130,14 @@ managing the timing of the loading of assets.
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
-        item.assetId = counter += 1
-        @queue[method](item)
-        item.deferred = Deferred
-          assetId: item.assetId
-          loadQueue: this
-          factory: @options.Deferred
+        deferred = Deferred {item, loadQueue: this, factory: @options.Deferred}
+        extend item,
+          assetId: counter += 1
+          reject: (args...) -> deferred.reject args...
+          resolve: (args...) -> deferred.resolve args...
+        @queue[method] item
         @_loadNext() if @options.autostart
-        item.deferred.promise()
+        deferred.promise()
 
       # TODO: Take option to prepend instead of append?
       load: (args...) -> @append args...
