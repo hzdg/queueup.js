@@ -40,10 +40,13 @@
       result
 
     extendPromise = (oldPromise, sources...) ->
-      oldThen = oldPromise.then
-      extend oldPromise, sources...,
-        then: (args...) ->
-          extendPromise oldThen.apply(this, args), sources...
+      promise = extend oldPromise, sources...
+      for fn in ['then', 'done', 'fail']
+        do ->
+          oldFn = oldPromise[fn]
+          promise[fn] = (args...) ->
+            extendPromise oldFn.apply(this, args), sources...
+      promise
 
     Deferred = (opts) ->
       factory = opts.factory
