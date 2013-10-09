@@ -11,7 +11,12 @@
 
     loadImage = (item) ->
       img = new Image
-      img.onload = -> item.deferred.resolve img
+      img.onload = ->
+        if ('naturalWidth' of this and (@naturalWidth + @naturalHeight == 0)) or (@width + @height == 0)
+          item.deferred.reject()
+        else
+          item.deferred.resolve img
+      img.onerror = -> item.deferred.reject()
       img.src = item.url
       null
 
