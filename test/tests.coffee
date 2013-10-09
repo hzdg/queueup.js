@@ -26,3 +26,28 @@ describe 'a queue', ->
     queueup(autostart: true)
       .load('assets/1.png')
         .then(-> done())
+
+
+describe 'a group', ->
+
+  it 'should yield control to its parent', (done) ->
+    complete = {}
+    queueup()
+      .group()
+        .load('assets/1.png')
+          .then(-> complete.asset1 = true)
+        .load('assets/2.png')
+          .then ->
+            complete.asset2 = true
+            unless complete.asset3
+              done new Error 'Second asset loaded before promoted group.'
+        .endGroup()
+          .then ->
+            done new Error 'First group loaded first.' unless complete.asset3
+            done()
+      .start()
+      .group()
+        .load('assets/3.png')
+          .then(-> complete.asset3 = true)
+        .endGroup()
+        .promote()
