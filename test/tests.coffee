@@ -1,14 +1,28 @@
 assert = chai.assert
 
 
-describe 'the master queue', ->
+describe 'the module', ->
+  it 'should be a load queue itself', ->
+    assert.typeOf queueup?.load, 'function'
+  it 'should have a reference to the LoadQueue constructor', ->
+    assert typeof queueup.LoadQueue is 'function'
+  it 'should create a queue when called', ->
+    queueup().constructor is queueup.LoadQueue
+
 
 describe 'a queue', ->
   it 'should load a PNG', (done) ->
-    queueup
-      .load('hzlogo.png')
-      .then(-> done())
+    queueup()
+      .load('assets/1.png')
+        .then(-> done())
       .start()
+
+  it 'should error for nonexistent assets', (done) ->
+    queueup()
+      .load('assets/DOES-NOT-EXIST')
+      .done ->
+        done new Error 'Promise was resolved'
+      .fail -> done()
 
   it 'should load HTML', (done) ->
     queueup()
@@ -32,6 +46,21 @@ describe 'a queue', ->
 
 
 describe 'a group', ->
+
+  it 'should complete when its assets complete', (done) ->
+    complete = {}
+    queueup().group()
+      .load('assets/1.png')
+        .then(-> complete.asset1 = true)
+      .load('assets/2.png')
+        .then(-> complete.asset2 = true)
+      .endGroup()
+        .then ->
+          if complete.asset1 and complete.asset2
+            done()
+          else
+            done new Error 'Group completed before assets.'
+      .start()
 
   it 'should yield control to its parent', (done) ->
     complete = {}
