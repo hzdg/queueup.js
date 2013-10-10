@@ -139,8 +139,15 @@ managing the timing of the loading of assets.
           reject: (args...) -> deferred.reject args...
           resolve: (args...) -> deferred.resolve args...
         @queue[method] item
+        promise = deferred.promise()
+        promise.then =>
+          if index = @loading.indexOf item != -1
+            # Remove the item from the list.
+            @loading.splice index, 1
+          # Load the next item.
+          @_loadNext()
         @_loadNext() if @options.autostart
-        new LoadResult this, deferred.promise()
+        new LoadResult this, promise
 
       # TODO: Take option to prepend instead of append?
       load: (args...) -> @append args...
