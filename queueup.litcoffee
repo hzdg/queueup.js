@@ -36,7 +36,8 @@
       result = {}
       for k, v of obj
         if typeof v is 'function' and k[0] != '_'
-          result[k] = (args...) -> v.apply obj, args
+          do (v) ->
+            result[k] = (args...) -> v.apply obj, args
       result
 
 The LoadResult is the result of calling `load()`. It implements a promise API.
