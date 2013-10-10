@@ -60,11 +60,16 @@ describe 'a queue', ->
       .start()
 
   it 'should be able to promote assets', (done) ->
-    queueup()
+    complete = {}
+    queueup(simultaneous: 1)
       .load('assets/1.png')
-        .then(-> done new Error 'First asset loaded first.')
+        .then ->
+          complete.asset1 = true
       .load('assets/2.png')
-        .then(-> done())
+        .then ->
+          if complete.asset1
+            done new Error "Promoted asset didn't load first"
+          done()
         .promote()
       .start()
 

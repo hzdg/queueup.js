@@ -43,14 +43,14 @@
 The LoadResult is the result of calling `load()`. It implements a promise API.
 
     class LoadResult
-      constructor: (loadQueue, promise) ->
+      constructor: (@loadQueue, promise, @item) ->
         extend this, boundFns(loadQueue)
         for fn in ['then', 'fail', 'done']
           do (fn) =>
             @[fn] = (args...) ->
               promise[fn] args...
               this
-      promote: ->
+      promote: -> @loadQueue._promote @item
       cancel: ->
 
 A Group is a type of LoadResult.
@@ -99,9 +99,12 @@ managing the timing of the loading of assets.
           if asset.assetId is assetId
             return @queue.splice(i, 1)[0]
 
-      _promote: (assetId) ->
-        if item = @_remove assetId
+      _promote: (item) ->
+        if (index = @queue.indexOf item) != -1
+          @queue.splice index, 1
           @queue.unshift item
+        else
+          raise Error 'Item not in queue'
         this
 
       _cancel: (assetId) ->
@@ -147,7 +150,7 @@ managing the timing of the loading of assets.
           # Load the next item.
           @_loadNext()
         @_loadNext() if @options.autostart
-        new LoadResult this, promise
+        new LoadResult this, promise, item
 
       # TODO: Take option to prepend instead of append?
       load: (args...) -> @append args...
