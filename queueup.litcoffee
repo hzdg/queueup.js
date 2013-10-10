@@ -141,7 +141,7 @@ managing the timing of the loading of assets.
         @queue[method] item
         promise = deferred.promise()
         promise.then =>
-          if index = @loading.indexOf item != -1
+          if (index = @loading.indexOf item) != -1
             # Remove the item from the list.
             @loading.splice index, 1
           # Load the next item.
