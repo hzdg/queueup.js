@@ -46,15 +46,18 @@ describe 'a queue', ->
 
   it 'should load in the correct order', (done) ->
     complete = {}
-    queueup()
+    queueup(simultaneous: 1)
       .load('assets/1.png')
         .then ->
-          assert.isFalse complete.asset2
+          if complete.asset2
+            done new Error 'Second asset loaded first.'
           complete.asset1 = true
       .load('assets/2.png')
         .then ->
-          assert.isTrue complete.asset1
+          unless complete.asset1
+            done new Error 'First asset not loaded.'
           done()
+      .start()
 
   it 'should be able to promote assets', (done) ->
     queueup()
