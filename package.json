@@ -20,7 +20,7 @@
   },
   "scripts": {
     "prepublish": "grunt build",
-    "test": "grunt mocha"
+    "test": "grunt test"
   },
   "repository": {
     "type": "git",
