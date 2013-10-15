@@ -13,6 +13,8 @@ describe 'the module', ->
     assert typeof queueup.LoadQueue is 'function'
   it 'should create a queue when called', ->
     queueup().constructor is queueup.LoadQueue
+  it 'should create unique instances', ->
+    assert.notEqual queueup(), queueup()
 
 
 describe 'a LoadResult', ->
@@ -121,10 +123,11 @@ describe 'a group', ->
       assert typeof g.append is 'function'
       assert g not in checked
       checked.push g
+    return
 
   it 'should yield control to its parent', (done) ->
     complete = {}
-    queueup()
+    queueup(simultaneous: 1)
       .group()
         .load(cb 'assets/1.png')
           .then(-> complete.asset1 = true)
@@ -135,8 +138,10 @@ describe 'a group', ->
               done new Error 'Second asset loaded before promoted group.'
         .endGroup()
           .then ->
-            done new Error 'First group loaded first.' unless complete.asset3
-            done()
+            if complete.asset3
+              done()
+            else
+              done new Error 'First group loaded first.'
       .group()
         .load(cb 'assets/3.png')
           .then(-> complete.asset3 = true)
