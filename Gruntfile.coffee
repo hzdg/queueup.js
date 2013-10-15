@@ -19,6 +19,11 @@ module.exports = (grunt) ->
         options:
           port: TEST_SERVER_PORT
           base: '.'
+      browser:
+        options:
+          port: TEST_SERVER_PORT
+          base: '.'
+          keepalive: true
     mocha:
       all:
         options:
@@ -43,4 +48,4 @@ module.exports = (grunt) ->
   # Define tasks.
   grunt.registerTask 'build', ['coffee']
   grunt.registerTask 'default', ['build']
-  grunt.registerTask 'test', ['connect', 'mocha']
+  grunt.registerTask 'test', ['connect:tests', 'mocha']
