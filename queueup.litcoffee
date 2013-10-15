@@ -43,26 +43,51 @@
 The LoadResult is the result of calling `load()`. It implements a promise API.
 
     class LoadResult
-      constructor: (@loadQueue, promise, @item) ->
+      constructor: (loadQueue, @parent, promise, @item) ->
         extend this, boundFns(loadQueue)
         for fn in ['then', 'fail', 'done']
           do (fn) =>
             @[fn] = (args...) ->
               promise[fn] args...
               this
-      promote: -> @loadQueue._promote @item
-      cancel: ->
+      promote: -> @parent._promote this
+      cancel: -> throw new Error 'not implemented'
 
-A Group is a type of LoadResult.
+A Group is a type of LoadResult that groups other LoadResults.
 
     class Group extends LoadResult
-      constructor: (loadResults, loadQueue, promise, resolve, reject) ->
-        super loadQueue, promise
-        @group = loadResults
-        $.when(@group...)
-          .done(resolve)
-          .fail(reject)
+      constructor: (loadQueue, parent, promise, @resolve, @reject) ->
+        super loadQueue, parent, promise
+        @_group = []
 
+      append: (loadResult) -> @_group.push loadResult
+
+      prepend: (loadResult) -> @_group.unshift loadResult
+
+      next: ->
+        if @_group.length and @_group[0].next
+          # If next is a nested group, return its next item, if it has one.
+          return next if next = @_group[0].next()
+          # TODO: resolve nested group?
+          # If the nested group was empty, discard it and call next again.
+          @_group.shift()
+          return @next()
+        @_group.shift()
+
+      # Remove an asset from the group and return it.
+      _remove: (assetId) ->
+        for result, i in @_group
+          if result.asset?.assetId is assetId
+            return @_group.splice(i, 1)[0]
+
+      # Promote an asset in the group.
+      _promote: (loadResult) ->
+        if (index = @_group.indexOf loadResult) != -1
+          @_group.splice index, 1
+          @_group.unshift loadResult
+        else
+          raise Error 'Item not in group'
+        loadResult
 
 The LoadQueue is the workhorse for queueup. It's the object responsible for
 managing the timing of the loading of assets.
@@ -80,9 +105,9 @@ managing the timing of the loading of assets.
           html: ['html']
 
       constructor: (opts) ->
-        @queue = []
         @loading = []
         @config opts
+        @_queueGroup = @_createGroup()
 
       config: (opts) ->
         unless @options
@@ -93,44 +118,23 @@ managing the timing of the loading of assets.
           @options[k] = v
         this
 
-      # Remove an asset from the queue and return it.
-      _remove: (assetId) ->
-        for asset, i in @queue
-          if asset.assetId is assetId
-            return @queue.splice(i, 1)[0]
+      # TODO: Take option to prepend instead of append?
+      load: (args...) ->
+        result = @_createLoadResult args...
+        @_getGroup().append result
+        @_loadNext() if @options.autostart
+        result
 
-      _promote: (item) ->
-        if (index = @queue.indexOf item) != -1
-          @queue.splice index, 1
-          @queue.unshift item
-        else
-          raise Error 'Item not in queue'
+      start: ->
+        @_loadNext()
         this
 
-      _cancel: (assetId) ->
-        !!@_remove(assetId)
+      _createGroup: (parent) ->
+        deferred = @options.Deferred()
+        promise = deferred.promise()
+        new Group this, parent, promise, deferred.resolve, deferred.reject
 
-      _loadNext: ->
-        return unless @loading.length < @options.simultaneous
-        if next = @queue.shift()
-          @_loadNow next
-          @_loadNext()  # Keep calling recursively until we're loading the max we can.
-
-      _loadNow: (item) ->
-        @loading.push item
-        loader = @getLoader item
-        loader item
-
-      getType: (item) ->
-        return item.type if item?.type?
-        ext = item.url?.match(EXT_RE)?[1].toLowerCase()
-        for k, v of @options.extensions
-          return k if ext in v
-        throw new Error "Couldn't determine type of #{ item.url }"
-
-      getLoader: (item) -> @options.loaders[@getType item]
-
-      _add: (method, urlOrOpts, opts) ->
+      _createLoadResult: (urlOrOpts, opts) ->
         item =
           if typeof urlOrOpts is 'object'
             extend {}, urlOrOpts
@@ -141,7 +145,6 @@ managing the timing of the loading of assets.
           assetId: counter += 1
           reject: (args...) -> deferred.reject args...
           resolve: (args...) -> deferred.resolve args...
-        @queue[method] item
         promise = deferred.promise()
         promise.then =>
           if (index = @loading.indexOf item) != -1
@@ -149,19 +152,30 @@ managing the timing of the loading of assets.
             @loading.splice index, 1
           # Load the next item.
           @_loadNext()
-        @_loadNext() if @options.autostart
-        new LoadResult this, promise, item
+        new LoadResult this, @_getGroup(), promise, item
 
-      # TODO: Take option to prepend instead of append?
-      load: (args...) -> @append args...
+      _getGroup: ->
+        @_currentGroup ?= @_createGroup @_queueGroup
 
-      append: (urlOrOpts, opts) -> @_add 'push', urlOrOpts, opts
+      _getLoader: (item) -> @options.loaders[@_getType item]
 
-      prepend: (url, opts) -> @_add 'unshift', urlOrOpts, opts
+      _getType: (item) ->
+        return item.type if item?.type?
+        ext = item.url?.match(EXT_RE)?[1].toLowerCase()
+        for k, v of @options.extensions
+          return k if ext in v
+        throw new Error "Couldn't determine type of #{ item.url }"
 
-      start: ->
-        @_loadNext()
-        this
+      _loadNext: ->
+        return unless @loading.length < @options.simultaneous
+        if next = @_getGroup().next()
+          @_loadNow next.item
+          @_loadNext()  # Keep calling recursively until we're loading the max we can.
+
+      _loadNow: (item) ->
+        @loading.push item
+        loader = @_getLoader item
+        loader item
 
 
 The queueup module itself is the master load queue, as well as a factory for
@@ -169,5 +183,5 @@ other load queues.
 
 
     @queueup = (args...) -> new LoadQueue args...
-    extend @queueup, new LoadQueue, LoadQueue: LoadQueue
+    extend @queueup, LoadQueue.prototype, new LoadQueue, {LoadQueue}
     LoadQueue.call @queueup
