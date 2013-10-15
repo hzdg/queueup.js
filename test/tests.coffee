@@ -96,6 +96,27 @@ describe 'a group', ->
             done new Error 'Group completed before assets.'
       .start()
 
+  it 'should make a new group after endGroup', ->
+    g1 = queueup()
+      .load('assets/1.png')
+      .endGroup()
+    g2 = g1
+      .load('assets/2.png')
+      .endGroup()
+    g3 = g2
+      .group()
+        .load('assets/3.png')
+        .endGroup()
+    g4 = g3
+      .load('assets/4.png')
+      .endGroup()
+
+    checked = []
+    for g in [g1, g2, g3, g4]
+      assert typeof g.append is 'function'
+      assert g not in checked
+      checked.push g
+
   it 'should yield control to its parent', (done) ->
     complete = {}
     queueup()
@@ -111,9 +132,9 @@ describe 'a group', ->
           .then ->
             done new Error 'First group loaded first.' unless complete.asset3
             done()
-      .start()
       .group()
         .load('assets/3.png')
           .then(-> complete.asset3 = true)
         .endGroup()
         .promote()
+      .start()

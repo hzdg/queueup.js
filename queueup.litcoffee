@@ -1,4 +1,26 @@
 
+    groupPromises = (Deferred, promises...) ->
+      count = 0
+      failed = false
+      deferred = Deferred()
+      results = new Array promises.length
+      checkDeferred = ->
+        return if failed
+        if count == promises.length
+          deferred.resolve results...
+      for p, i in promises
+        do (i) ->
+          p.then (args...) ->
+            results[i] = args
+            count += 1
+            checkDeferred()
+          p.fail (args...) ->
+            failed = true
+            count += 1
+            deferred.reject args...
+      deferred.promise()
+
+
     EXT_RE = /\.([^.]+?)(\?.*)?$/
 
     counter = 0
@@ -117,6 +139,21 @@ managing the timing of the loading of assets.
         for own k, v of opts
           @options[k] = v
         this
+
+      group: ->
+        parent = @_getGroup()
+        group = @_createGroup parent
+        parent.append group
+        @_currentGroup = group
+
+      endGroup: ->
+        oldGroup = @_getGroup()
+        @_currentGroup = oldGroup.parent
+        # Set up the group's promise resolution
+        groupPromises(@options.Deferred, oldGroup._group...)
+          .done(oldGroup.resolve)
+          .fail(oldGroup.reject)
+        oldGroup
 
       # TODO: Take option to prepend instead of append?
       load: (args...) ->
