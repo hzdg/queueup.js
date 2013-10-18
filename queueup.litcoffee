@@ -108,7 +108,7 @@ A Group is a type of LoadResult that groups other LoadResults.
           @_group.splice index, 1
           @_group.unshift loadResult
         else
-          raise Error 'Item not in group'
+          throw new Error 'Item not in group'
         loadResult
 
 The LoadQueue is the workhorse for queueup. It's the object responsible for
