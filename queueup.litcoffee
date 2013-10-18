@@ -72,6 +72,7 @@ The LoadResult is the result of calling `load()`. It implements a promise API.
             @[fn] = (args...) ->
               promise[fn] args...
               this
+        @state = -> promise.state()
       promote: -> @parent._promote this
       cancel: -> throw new Error 'not implemented'
 
