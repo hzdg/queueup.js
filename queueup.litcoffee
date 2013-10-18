@@ -104,12 +104,11 @@ A Group is a type of LoadResult that groups other LoadResults.
             return @_group.splice(i, 1)[0]
 
       # Promote an asset in the group.
+      # If the asset is already at the 'head' or already loaded, this is a noop.
       _promote: (loadResult) ->
-        if (index = @_group.indexOf loadResult) != -1
+        if (index = @_group.indexOf loadResult) > 0
           @_group.splice index, 1
           @_group.unshift loadResult
-        else
-          throw new Error 'Item not in group'
         loadResult
 
 The LoadQueue is the workhorse for queueup. It's the object responsible for
