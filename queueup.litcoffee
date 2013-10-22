@@ -194,7 +194,7 @@ managing the timing of the loading of assets.
       _getGroup: ->
         @_currentGroup ?= @_createGroup @_queueGroup
 
-      _getLoader: (item) -> @options.loaders[@_getType item]
+      _getLoader: (item) -> item.loader ? @options.loaders[@_getType item]
 
       _getType: (item) ->
         return item.type if item?.type?
