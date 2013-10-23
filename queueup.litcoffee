@@ -183,12 +183,13 @@ managing the timing of the loading of assets.
           reject: (args...) -> deferred.reject args...
           resolve: (args...) -> deferred.resolve args...
         promise = deferred.promise()
-        promise.then =>
-          if (index = @loading.indexOf item) != -1
+        onItemDone = =>
+          if (index = @loading.indexOf item) != 1
             # Remove the item from the list.
             @loading.splice index, 1
           # Load the next item.
           @_loadNext()
+        promise.then onItemDone, onItemDone
         new LoadResult this, @_getGroup(), promise, item
 
       _getGroup: ->
@@ -203,11 +204,17 @@ managing the timing of the loading of assets.
           return k if ext in v
         throw new Error "Couldn't determine type of #{ item.url }"
 
-      _loadNext: ->
+      _loadNext: =>
         return unless @loading.length < @options.simultaneous
         if next = @_getGroup().next()
-          @_loadNow next.item
-          @_loadNext()  # Keep calling recursively until we're loading the max we can.
+          try
+            @_loadNow next.item
+          catch err
+            console?.warn? "Error: #{ err.message }"
+            next.item.reject(err)
+
+          # Keep calling recursively until we're loading the max we can.
+          @_loadNext()
 
       _loadNow: (item) ->
         @loading.push item
