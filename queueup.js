@@ -371,10 +371,4 @@
     })(LoadQueue, args, function(){});
   };
 
-  extend(this.queueup, LoadQueue.prototype, new LoadQueue, {
-    LoadQueue: LoadQueue
-  });
-
-  LoadQueue.call(this.queueup);
-
 }).call(this);
