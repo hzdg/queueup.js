@@ -37,15 +37,25 @@ module.exports = (grunt) ->
       coffee:
         files: ['queueup.litcoffee', 'test/tests.coffee']
         tasks: ['coffee']
-
+    bump:
+      options:
+        files: ['package.json', 'bower.json']
+        commit: true
+        commitFiles: ['-a']
+        createTag: true
+        push: false
 
   # Load grunt plugins
   grunt.loadNpmTasks 'grunt-contrib-coffee'
   grunt.loadNpmTasks 'grunt-contrib-watch'
   grunt.loadNpmTasks 'grunt-contrib-connect'
   grunt.loadNpmTasks 'grunt-mocha'
+  grunt.loadNpmTasks 'grunt-bump'
 
   # Define tasks.
   grunt.registerTask 'build', ['coffee']
   grunt.registerTask 'default', ['build']
   grunt.registerTask 'test', ['connect:tests', 'mocha']
+  grunt.registerTask 'version:patch', ['build', 'bump:patch']
+  grunt.registerTask 'version:minor', ['build', 'bump:minor']
+  grunt.registerTask 'version:major', ['build', 'bump:major']
