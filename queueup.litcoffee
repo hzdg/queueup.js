@@ -123,7 +123,7 @@ managing the timing of the loading of assets.
           image: loadImage
           html: loadHtml
         extensions:
-          image: ['png', 'jpg', 'jpeg', 'gif']
+          image: ['png', 'jpg', 'jpeg', 'gif', 'svg']
           html: ['html']
 
       constructor: (opts) ->
