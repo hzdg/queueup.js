@@ -3,6 +3,7 @@
     __slice = [].slice,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   groupPromises = function() {
@@ -218,6 +219,7 @@
     };
 
     function LoadQueue(opts) {
+      this._loadNext = __bind(this._loadNext, this);
       this.loading = [];
       this.config(opts);
       this._queueGroup = this._createGroup();
@@ -284,7 +286,7 @@
     };
 
     LoadQueue.prototype._createLoadResult = function(urlOrOpts, opts) {
-      var deferred, item, promise,
+      var deferred, item, onItemDone, promise,
         _this = this;
       item = typeof urlOrOpts === 'object' ? extend({}, urlOrOpts) : extend({}, opts, {
         url: urlOrOpts
@@ -304,13 +306,14 @@
         }
       });
       promise = deferred.promise();
-      promise.then(function() {
+      onItemDone = function() {
         var index;
-        if ((index = _this.loading.indexOf(item)) !== -1) {
+        if ((index = _this.loading.indexOf(item)) !== 1) {
           _this.loading.splice(index, 1);
         }
         return _this._loadNext();
-      });
+      };
+      promise.then(onItemDone, onItemDone);
       return new LoadResult(this, this._getGroup(), promise, item);
     };
 
@@ -340,12 +343,22 @@
     };
 
     LoadQueue.prototype._loadNext = function() {
-      var next;
+      var err, next;
       if (!(this.loading.length < this.options.simultaneous)) {
         return;
       }
       if (next = this._getGroup().next()) {
-        this._loadNow(next.item);
+        try {
+          this._loadNow(next.item);
+        } catch (_error) {
+          err = _error;
+          if (typeof console !== "undefined" && console !== null) {
+            if (typeof console.warn === "function") {
+              console.warn("Error: " + err.message);
+            }
+          }
+          next.item.reject(err);
+        }
         return this._loadNext();
       }
     };
