@@ -1,0 +1,23 @@
+{
+  "name": "queueup",
+  "version": "0.0.0",
+  "authors": [
+    "Eric Eldredge <lettertwo@gmail.com>",
+    "Matthew Tretter <m@tthewwithanm.com>"
+  ],
+  "description": "A promise-based load queue.",
+  "main": "queueup.js",
+  "keywords": [
+    "loading",
+    "loadqueue"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/hzdg/queueup.js",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
