@@ -213,7 +213,7 @@
         html: loadHtml
       },
       extensions: {
-        image: ['png', 'jpg', 'jpeg', 'gif'],
+        image: ['png', 'jpg', 'jpeg', 'gif', 'svg'],
         html: ['html']
       }
     };
