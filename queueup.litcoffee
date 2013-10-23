@@ -215,10 +215,7 @@ managing the timing of the loading of assets.
         loader item
 
 
-The queueup module itself is the master load queue, as well as a factory for
-other load queues.
+The queueup module itself is a factory for other load queues.
 
 
     @queueup = (args...) -> new LoadQueue args...
-    extend @queueup, LoadQueue.prototype, new LoadQueue, {LoadQueue}
-    LoadQueue.call @queueup
