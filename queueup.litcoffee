@@ -213,7 +213,8 @@ managing the timing of the loading of assets.
         opts = resultObj.loadOptions
         @loading.push opts
         loader = @_getLoader opts
-        loader opts, resultObj._done, resultObj._fail
+        loader(opts, resultObj._done, resultObj._fail)
+          ?.then? resultObj._done, resultObj._fail  # If a promise is returned, use it.
 
 
 The queueup module itself is a factory for other load queues.
