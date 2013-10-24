@@ -1,6 +1,6 @@
 {
   "name": "queueup.js",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "A promise-based JavaScript asset loader.",
   "main": "queueup.js",
   "directories": {

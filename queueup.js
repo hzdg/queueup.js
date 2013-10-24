@@ -62,36 +62,34 @@
     return target;
   };
 
-  loadImage = function(item) {
+  loadImage = function(opts, done, fail) {
     var img;
     img = new Image;
     img.onload = function() {
       if (('naturalWidth' in this && (this.naturalWidth + this.naturalHeight === 0)) || (this.width + this.height === 0)) {
-        return item.reject();
+        return fail(new Error("Image <" + opts.url + "> could not be loaded."));
       } else {
-        return item.resolve(img);
+        return done(img);
       }
     };
-    img.onerror = item.reject;
-    img.src = item.url;
-    return null;
+    img.onerror = fail;
+    img.src = opts.url;
   };
 
-  loadHtml = function(item) {
+  loadHtml = function(opts, done, fail) {
     var xhr;
     xhr = new XMLHttpRequest;
     xhr.onreadystatechange = function() {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
-          return item.resolve(xhr.responseText);
+          return done(xhr.responseText);
         } else {
-          return item.reject(xhr.status);
+          return fail(new Error("URL <" + opts.url + "> failed with status " + xhr.status + "."));
         }
       }
     };
-    xhr.open('GET', item.url, true);
+    xhr.open('GET', opts.url, true);
     xhr.send();
-    return null;
   };
 
   boundFns = function(obj) {
@@ -113,12 +111,13 @@
   };
 
   LoadResult = (function() {
-    function LoadResult(loadQueue, parent, promise, item) {
-      var fn, _fn, _i, _len, _ref,
+    function LoadResult(loadQueue, parent, deferred, loadOptions) {
+      var fn, promise, _fn, _i, _len, _ref,
         _this = this;
       this.parent = parent;
-      this.item = item;
+      this.loadOptions = loadOptions;
       extend(this, boundFns(loadQueue));
+      promise = deferred.promise();
       _ref = ['then', 'fail', 'done'];
       _fn = function(fn) {
         return _this[fn] = function() {
@@ -132,6 +131,16 @@
         fn = _ref[_i];
         _fn(fn);
       }
+      this._done = function() {
+        var args;
+        args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+        return deferred.resolve.apply(deferred, args);
+      };
+      this._fail = function() {
+        var args;
+        args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+        return deferred.reject.apply(deferred, args);
+      };
       this.state = function() {
         return promise.state();
       };
@@ -177,17 +186,6 @@
         return this.next();
       }
       return this._group.shift();
-    };
-
-    Group.prototype._remove = function(assetId) {
-      var i, result, _i, _len, _ref, _ref1;
-      _ref = this._group;
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        result = _ref[i];
-        if (((_ref1 = result.asset) != null ? _ref1.assetId : void 0) === assetId) {
-          return this._group.splice(i, 1)[0];
-        }
-      }
     };
 
     Group.prototype._promote = function(loadResult) {
@@ -286,52 +284,39 @@
     };
 
     LoadQueue.prototype._createLoadResult = function(urlOrOpts, opts) {
-      var deferred, item, onItemDone, promise,
+      var deferred, newOpts, onItemDone, promise,
         _this = this;
-      item = typeof urlOrOpts === 'object' ? extend({}, urlOrOpts) : extend({}, opts, {
+      newOpts = typeof urlOrOpts === 'object' ? extend({}, urlOrOpts) : extend({}, opts, {
         url: urlOrOpts
       });
       deferred = this.options.Deferred();
-      extend(item, {
-        assetId: counter += 1,
-        reject: function() {
-          var args;
-          args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-          return deferred.reject.apply(deferred, args);
-        },
-        resolve: function() {
-          var args;
-          args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-          return deferred.resolve.apply(deferred, args);
-        }
-      });
       promise = deferred.promise();
       onItemDone = function() {
         var index;
-        if ((index = _this.loading.indexOf(item)) !== 1) {
+        if ((index = _this.loading.indexOf(opts)) !== 1) {
           _this.loading.splice(index, 1);
         }
         return _this._loadNext();
       };
       promise.then(onItemDone, onItemDone);
-      return new LoadResult(this, this._getGroup(), promise, item);
+      return new LoadResult(this, this._getGroup(), deferred, newOpts);
     };
 
     LoadQueue.prototype._getGroup = function() {
       return this._currentGroup != null ? this._currentGroup : this._currentGroup = this._createGroup(this._queueGroup);
     };
 
-    LoadQueue.prototype._getLoader = function(item) {
+    LoadQueue.prototype._getLoader = function(opts) {
       var _ref;
-      return (_ref = item.loader) != null ? _ref : this.options.loaders[this._getType(item)];
+      return (_ref = opts.loader) != null ? _ref : this.options.loaders[this._getType(opts)];
     };
 
-    LoadQueue.prototype._getType = function(item) {
+    LoadQueue.prototype._getType = function(opts) {
       var ext, k, v, _ref, _ref1, _ref2;
-      if ((item != null ? item.type : void 0) != null) {
-        return item.type;
+      if ((opts != null ? opts.type : void 0) != null) {
+        return opts.type;
       }
-      ext = (_ref = item.url) != null ? (_ref1 = _ref.match(EXT_RE)) != null ? _ref1[1].toLowerCase() : void 0 : void 0;
+      ext = (_ref = opts.url) != null ? (_ref1 = _ref.match(EXT_RE)) != null ? _ref1[1].toLowerCase() : void 0 : void 0;
       _ref2 = this.options.extensions;
       for (k in _ref2) {
         v = _ref2[k];
@@ -339,7 +324,7 @@
           return k;
         }
       }
-      throw new Error("Couldn't determine type of " + item.url);
+      throw new Error("Couldn't determine type of " + opts.url);
     };
 
     LoadQueue.prototype._loadNext = function() {
@@ -349,7 +334,7 @@
       }
       if (next = this._getGroup().next()) {
         try {
-          this._loadNow(next.item);
+          this._loadNow(next);
         } catch (_error) {
           err = _error;
           if (typeof console !== "undefined" && console !== null) {
@@ -357,17 +342,18 @@
               console.warn("Error: " + err.message);
             }
           }
-          next.item.reject(err);
+          next._fail(err);
         }
         return this._loadNext();
       }
     };
 
-    LoadQueue.prototype._loadNow = function(item) {
-      var loader;
-      this.loading.push(item);
-      loader = this._getLoader(item);
-      return loader(item);
+    LoadQueue.prototype._loadNow = function(resultObj) {
+      var loader, opts, _ref;
+      opts = resultObj.loadOptions;
+      this.loading.push(opts);
+      loader = this._getLoader(opts);
+      return (_ref = loader(opts, resultObj._done, resultObj._fail)) != null ? typeof _ref.then === "function" ? _ref.then(resultObj._done, resultObj._fail) : void 0 : void 0;
     };
 
     return LoadQueue;
@@ -383,5 +369,7 @@
       return Object(result) === result ? result : child;
     })(LoadQueue, args, function(){});
   };
+
+  this.queueup.LoadQueue = LoadQueue;
 
 }).call(this);
