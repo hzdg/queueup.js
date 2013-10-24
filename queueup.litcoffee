@@ -65,14 +65,16 @@
 The LoadResult is the result of calling `load()`. It implements a promise API.
 
     class LoadResult
-      constructor: (loadQueue, @parent, @_deferred, @loadOptions) ->
+      constructor: (loadQueue, @parent, deferred, @loadOptions) ->
         extend this, boundFns(loadQueue)
-        promise = @_deferred.promise()
+        promise = deferred.promise()
         for fn in ['then', 'fail', 'done']
           do (fn) =>
             @[fn] = (args...) ->
               promise[fn] args...
               this
+        @_done = (args...) -> deferred.resolve args...
+        @_fail = (args...) -> deferred.reject args...
         @state = -> promise.state()
       promote: -> @parent._promote this
       cancel: -> throw new Error 'not implemented'
@@ -202,7 +204,7 @@ managing the timing of the loading of assets.
             @_loadNow next
           catch err
             console?.warn? "Error: #{ err.message }"
-            next._deferred.reject err
+            next._fail err
 
           # Keep calling recursively until we're loading the max we can.
           @_loadNext()
@@ -211,7 +213,7 @@ managing the timing of the loading of assets.
         opts = resultObj.loadOptions
         @loading.push opts
         loader = @_getLoader opts
-        loader opts, resultObj._deferred.resolve, resultObj._deferred.reject
+        loader opts, resultObj._done, resultObj._fail
 
 
 The queueup module itself is a factory for other load queues.
