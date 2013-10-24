@@ -40,7 +40,7 @@
           item.resolve img
       img.onerror = item.reject
       img.src = item.url
-      null
+      return
 
     loadHtml = (item) ->
       xhr = new XMLHttpRequest
@@ -52,7 +52,7 @@
             item.reject xhr.status
       xhr.open 'GET', item.url, true
       xhr.send()
-      null
+      return
 
     boundFns = (obj) ->
       result = {}
