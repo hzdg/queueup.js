@@ -220,3 +220,4 @@ The queueup module itself is a factory for other load queues.
 
 
     @queueup = (args...) -> new LoadQueue args...
+    @queueup.LoadQueue = LoadQueue
