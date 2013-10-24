@@ -7,10 +7,10 @@ cb = (name) -> "#{ name }?#{ t }-#{ count += 1 }"
 
 
 describe 'the module', ->
-  it 'should be a load queue factory', ->
-    assert.instanceOf queueup(), queueup.LoadQueue
   it 'should have a reference to the LoadQueue constructor', ->
     assert typeof queueup.LoadQueue is 'function'
+  it 'should be a load queue factory', ->
+    assert.instanceOf queueup(), queueup.LoadQueue
   it 'should create a queue when called', ->
     queueup().constructor is queueup.LoadQueue
   it 'should create unique instances', ->
