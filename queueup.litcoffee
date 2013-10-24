@@ -97,12 +97,6 @@ A Group is a type of LoadResult that groups other LoadResults.
           return @next()
         @_group.shift()
 
-      # Remove an asset from the group and return it.
-      _remove: (assetId) ->
-        for result, i in @_group
-          if result.asset?.assetId is assetId
-            return @_group.splice(i, 1)[0]
-
       # Promote an asset in the group.
       # If the asset is already at the 'head' or already loaded, this is a noop.
       _promote: (loadResult) ->
