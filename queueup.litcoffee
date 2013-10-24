@@ -31,26 +31,26 @@
           target[k] = v
       target
 
-    loadImage = (item) ->
+    loadImage = (opts, done, fail) ->
       img = new Image
       img.onload = ->
         if ('naturalWidth' of this and (@naturalWidth + @naturalHeight == 0)) or (@width + @height == 0)
-          item.reject()
+          fail new Error "Image <#{ opts.url }> could not be loaded."
         else
-          item.resolve img
-      img.onerror = item.reject
-      img.src = item.url
+          done img
+      img.onerror = fail
+      img.src = opts.url
       return
 
-    loadHtml = (item) ->
+    loadHtml = (opts, done, fail) ->
       xhr = new XMLHttpRequest
       xhr.onreadystatechange = ->
         if xhr.readyState == 4
           if xhr.status == 200
-            item.resolve xhr.responseText
+            done xhr.responseText
           else
-            item.reject xhr.status
-      xhr.open 'GET', item.url, true
+            fail new Error "URL <#{ opts.url }> failed with status #{ xhr.status }."
+      xhr.open 'GET', opts.url, true
       xhr.send()
       return
 
@@ -65,8 +65,9 @@
 The LoadResult is the result of calling `load()`. It implements a promise API.
 
     class LoadResult
-      constructor: (loadQueue, @parent, promise, @item) ->
+      constructor: (loadQueue, @parent, @_deferred, @loadOptions) ->
         extend this, boundFns(loadQueue)
+        promise = @_deferred.promise()
         for fn in ['then', 'fail', 'done']
           do (fn) =>
             @[fn] = (args...) ->
@@ -166,54 +167,51 @@ managing the timing of the loading of assets.
         new Group this, parent, promise, deferred.resolve, deferred.reject
 
       _createLoadResult: (urlOrOpts, opts) ->
-        item =
+        newOpts =
           if typeof urlOrOpts is 'object'
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
         deferred = @options.Deferred()
-        extend item,
-          assetId: counter += 1
-          reject: (args...) -> deferred.reject args...
-          resolve: (args...) -> deferred.resolve args...
         promise = deferred.promise()
         onItemDone = =>
-          if (index = @loading.indexOf item) != 1
+          if (index = @loading.indexOf opts) != 1
             # Remove the item from the list.
             @loading.splice index, 1
           # Load the next item.
           @_loadNext()
         promise.then onItemDone, onItemDone
-        new LoadResult this, @_getGroup(), promise, item
+        new LoadResult this, @_getGroup(), deferred, newOpts
 
       _getGroup: ->
         @_currentGroup ?= @_createGroup @_queueGroup
 
-      _getLoader: (item) -> item.loader ? @options.loaders[@_getType item]
+      _getLoader: (opts) -> opts.loader ? @options.loaders[@_getType opts]
 
-      _getType: (item) ->
-        return item.type if item?.type?
-        ext = item.url?.match(EXT_RE)?[1].toLowerCase()
+      _getType: (opts) ->
+        return opts.type if opts?.type?
+        ext = opts.url?.match(EXT_RE)?[1].toLowerCase()
         for k, v of @options.extensions
           return k if ext in v
-        throw new Error "Couldn't determine type of #{ item.url }"
+        throw new Error "Couldn't determine type of #{ opts.url }"
 
       _loadNext: =>
         return unless @loading.length < @options.simultaneous
         if next = @_getGroup().next()
           try
-            @_loadNow next.item
+            @_loadNow next
           catch err
             console?.warn? "Error: #{ err.message }"
-            next.item.reject(err)
+            next._deferred.reject err
 
           # Keep calling recursively until we're loading the max we can.
           @_loadNext()
 
-      _loadNow: (item) ->
-        @loading.push item
-        loader = @_getLoader item
-        loader item
+      _loadNow: (resultObj) ->
+        opts = resultObj.loadOptions
+        @loading.push opts
+        loader = @_getLoader opts
+        loader opts, resultObj._deferred.resolve, resultObj._deferred.reject
 
 
 The queueup module itself is a factory for other load queues.
