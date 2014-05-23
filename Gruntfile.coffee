@@ -8,9 +8,17 @@ module.exports = (grunt) ->
     coffee:
       compile:
         files: [
-          expand: true
-          src: ['queueup.litcoffee', 'test/tests.coffee']
-          ext: '.js'
+            expand: true
+            cwd: 'src'
+            src: '**/*.?(lit)coffee'
+            dest: 'lib'
+            ext: '.js'
+          ,
+            expand: true
+            cwd: 'test'
+            src: '**/*.?(lit)coffee'
+            dest: 'test'
+            ext: '.js'
         ]
     connect:
       # Because we're dealing with asset loading, we need to be running a
@@ -35,7 +43,7 @@ module.exports = (grunt) ->
       options:
         atBegin: true
       coffee:
-        files: ['queueup.litcoffee', 'test/tests.coffee']
+        files: ['src/**/*.?(lit)coffee', 'test/**/*.?(lit)coffee']
         tasks: ['coffee']
     bump:
       options:

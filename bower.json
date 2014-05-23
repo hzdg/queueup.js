@@ -6,7 +6,7 @@
     "Matthew Tretter <m@tthewwithanm.com>"
   ],
   "description": "A promise-based load queue.",
-  "main": "queueup.js",
+  "main": "lib/queueup.js",
   "keywords": [
     "loading",
     "loadqueue"

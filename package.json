@@ -2,7 +2,7 @@
   "name": "queueup",
   "version": "0.2.1",
   "description": "A promise-based JavaScript asset loader.",
-  "main": "queueup.js",
+  "main": "lib/queueup.js",
   "directories": {
     "test": "test"
   },
