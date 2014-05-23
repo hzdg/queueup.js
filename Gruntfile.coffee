@@ -20,6 +20,14 @@ module.exports = (grunt) ->
             dest: 'test'
             ext: '.js'
         ]
+    browserify:
+      options:
+        transform: ['coffeeify']
+        bundleOptions:
+          standalone: 'queueup'
+      standalone:
+        files:
+          'standalone/queueup.js': ['src/queueup.litcoffee']
     connect:
       # Because we're dealing with asset loading, we need to be running a
       # server for tests. Else, CORS.
@@ -59,9 +67,10 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-connect'
   grunt.loadNpmTasks 'grunt-mocha'
   grunt.loadNpmTasks 'grunt-bump'
+  grunt.loadNpmTasks 'grunt-browserify'
 
   # Define tasks.
-  grunt.registerTask 'build', ['coffee']
+  grunt.registerTask 'build', ['coffee', 'browserify']
   grunt.registerTask 'default', ['build']
   grunt.registerTask 'test', ['connect:tests', 'mocha']
   grunt.registerTask 'version:patch', ['build', 'bump:patch']

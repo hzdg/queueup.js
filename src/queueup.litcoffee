@@ -220,5 +220,7 @@ managing the timing of the loading of assets.
 The queueup module itself is a factory for other load queues.
 
 
-    @queueup = (args...) -> new LoadQueue args...
-    @queueup.LoadQueue = LoadQueue
+    queueup = (args...) -> new LoadQueue args...
+    queueup.LoadQueue = LoadQueue
+
+    module.exports = queueup
