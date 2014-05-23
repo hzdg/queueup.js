@@ -136,10 +136,7 @@ managing the timing of the loading of assets.
         @_queueGroup = @_createGroup()
 
       config: (opts) ->
-        unless @options
-          @options ?= {}
-          for own k, v of @defaultOptions
-            @options[k] = v
+        @options ?= {}
         for own k, v of opts
           @options[k] = v
         this
@@ -162,12 +159,15 @@ managing the timing of the loading of assets.
       load: (args...) ->
         result = @_createLoadResult args...
         @_getGroup().append result
-        @_loadNext() if @options.autostart
+        @_loadNext() if @_getOption 'autostart'
         result
 
       start: ->
         @_loadNext()
         this
+
+      _getOption: (option) ->
+        @options[option] ? @defaultOptions[option]
 
       _createGroup: (parent) ->
         deferred = new Deferred @options.Promise
@@ -192,17 +192,17 @@ managing the timing of the loading of assets.
       _getGroup: ->
         @_currentGroup ?= @_createGroup @_queueGroup
 
-      _getLoader: (opts) -> opts.loader ? @options.loaders[@_getType opts]
+      _getLoader: (opts) -> opts?.loader ? @_getOption('loaders')[@_getType opts]
 
       _getType: (opts) ->
         return opts.type if opts?.type?
         ext = opts.url?.match(EXT_RE)?[1].toLowerCase()
-        for k, v of @options.extensions
+        for k, v of @_getOption 'extensions'
           return k if ext in v
         throw new Error "Couldn't determine type of #{ opts.url }"
 
       _loadNext: =>
-        return unless @loading.length < @options.simultaneous
+        return unless @loading.length < @_getOption 'simultaneous'
         if next = @_getGroup().next()
           try
             @_loadNow next
