@@ -42,6 +42,24 @@ describe 'extensions', ->
     assert.Throw fn, "Couldn't determine type of something"
 
 
+describe 'loaders', ->
+
+  it "should error when a loader isn't registered for a type", ->
+    fn = -> queueup()._getLoader type: 'fake', url: 'thing.fake'
+    assert.Throw fn, 'A loader to handle thing.fake could not be found'
+
+  it 'should use a global loader for a given type', ->
+    queueup.use 'image', loader = ->
+    assert.equal queueup()._getLoader(url: 'thing.png'), loader
+    queueup.LoadQueue::defaultOptions.loaders = {}
+
+  it 'should use a loader for a given type', ->
+    queue = queueup().use 'image', loader = ->
+    assert.equal queue._getLoader(url: 'thing.png'), loader
+    queueup.use 'image', null
+    assert.equal queue._getLoader(url: 'thing.png'), loader
+
+
 describe 'a LoadResult', ->
   loadResult = queueup()
     .load(uncached 'assets/1.png')

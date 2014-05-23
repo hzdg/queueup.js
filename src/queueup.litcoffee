@@ -141,6 +141,11 @@ managing the timing of the loading of assets.
           @options[k] = v
         this
 
+      use: (type, loader) ->
+        @options.loaders ?= {}
+        @options.loaders[type] = loader
+        this
+
       group: ->
         parent = @_getGroup()
         group = @_createGroup parent
@@ -192,7 +197,11 @@ managing the timing of the loading of assets.
       _getGroup: ->
         @_currentGroup ?= @_createGroup @_queueGroup
 
-      _getLoader: (opts) -> opts?.loader ? @_getOption('loaders')[@_getType opts]
+      _getLoader: (opts) ->
+        loader = opts?.loader ? @_getOption('loaders')[@_getType opts]
+        unless loader
+            throw new Error "A loader to handle #{opts.url} could not be found"
+        loader
 
       _getType: (opts) ->
         return opts.type if opts?.type?
@@ -231,3 +240,10 @@ The queueup module itself is a factory for other load queues.
     queueup.LoadQueue = LoadQueue
 
     module.exports = queueup
+
+Register loaders globally with queueup.use.
+
+
+    queueup.use = (type, loader) ->
+      LoadQueue::defaultOptions.loaders[type] = loader
+      return this
