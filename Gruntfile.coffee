@@ -22,12 +22,11 @@ module.exports = (grunt) ->
         ]
     browserify:
       options:
-        transform: ['coffeeify']
         bundleOptions:
           standalone: 'queueup'
       standalone:
         files:
-          'standalone/queueup.js': ['src/queueup.litcoffee']
+          'standalone/queueup.js': ['lib/queueup.js']
     connect:
       # Because we're dealing with asset loading, we need to be running a
       # server for tests. Else, CORS.
