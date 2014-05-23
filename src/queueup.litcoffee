@@ -121,7 +121,7 @@ managing the timing of the loading of assets.
 
     class LoadQueue
       defaultOptions:
-        Promise: window?.Promise ? Promise
+        Promise: Promise
         autostart: false
         simultaneous: 6  # The maximum number of items to load at once
         loaders:
