@@ -17,6 +17,31 @@ describe 'the module', ->
     assert.notEqual queueup(), queueup()
 
 
+describe 'extensions', ->
+
+  it 'should detect image extensions', ->
+    queue = queueup()
+    assert.equal queue._getType(test), 'image' for test in [
+      {url: 'test.png'}
+      {url: 'test.jpg'}
+      {url: 'test.jpeg'}
+      {url: 'test.gif'}
+      {url: 'test.svg'}
+      {type: 'image'}
+    ]
+
+  it 'should detect html extensions', ->
+    queue = queueup()
+    assert.equal queue._getType(test), 'html' for test in [
+      {url: 'my_file.html'}
+      {type: 'html'}
+    ]
+
+  it 'should error when extension cannot be matched to a type', ->
+    fn = -> queueup()._getType(url: 'something')
+    assert.Throw fn, "Couldn't determine type of something"
+
+
 describe 'a LoadResult', ->
   loadResult = queueup()
     .load(uncached 'assets/1.png')
