@@ -23,7 +23,7 @@
             results[i] = args
             count += 1
             checkDeferred()
-          p.fail (args...) ->
+          p.catch (args...) ->
             failed = true
             count += 1
             reject args...
@@ -76,14 +76,14 @@ The LoadResult is the result of calling `load()`. It implements a promise API.
     class LoadResult
       constructor: (loadQueue, @parent, promise, resolve, reject, @loadOptions) ->
         extend this, boundFns(loadQueue)
-        for fn in ['then', 'fail', 'done']
-          do (fn) =>
-            @[fn] = (args...) ->
-              promise[fn] args...
+        for k, v of {then: 'then', catch: 'catch', fail: 'catch', done: 'then'} # FIXME: Remove `done`, `fail`
+          do (k, v) =>
+            @[k] = (args...) ->
+              promise[v] args...
               this
         @_done = (args...) -> resolve args...
         @_fail = (args...) -> reject args...
-        # @state = -> promise.state() # TODO: Do we need this?
+        # @state = -> promise.state() # FIXME: Do we need this?
       promote: -> @parent._promote this
       cancel: -> throw new Error 'not implemented'
 
@@ -156,8 +156,7 @@ managing the timing of the loading of assets.
         @_currentGroup = oldGroup.parent
         # Set up the group's promise resolution
         groupPromises(@options.Promise, oldGroup._group...)
-          .done(oldGroup.resolve)
-          .fail(oldGroup.reject)
+          .then oldGroup.resolve, oldGroup.reject
         oldGroup
 
       # TODO: Take option to prepend instead of append?
