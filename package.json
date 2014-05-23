@@ -33,7 +33,7 @@
     "load",
     "loadqueue"
   ],
-  "author": "Matthew Tretter <m@tthewwithanm.com>",
+  "author": "Matthew Dapena-Tretter <m@tthewwithanm.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/matthewwithanm/queueup.js/issues"
