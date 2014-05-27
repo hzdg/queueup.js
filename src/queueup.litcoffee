@@ -1,17 +1,17 @@
     Promise = require './Promise'
 
 
-    createPromise = (Promise) ->
+    createDeferred = (Promise) ->
       unless Promise
         throw new Error "Environment doesn't support Promises; you must provide a Promise option."
       resolve = reject = null
       promise = new Promise (a, b) -> resolve = a; reject = b
-      [promise, resolve, reject]
+      {promise, resolve, reject}
 
     groupPromises = (Promise, promises...) ->
       count = 0
       failed = false
-      [promise, resolve, reject] = createPromise Promise
+      {promise, resolve, reject} = createDeferred Promise
       results = new Array promises.length
       checkPromises = ->
         return if failed
@@ -74,8 +74,9 @@
 The LoadResult is the result of calling `load()`. It implements a promise API.
 
     class LoadResult
-      constructor: (loadQueue, @parent, promise, resolve, reject, @loadOptions) ->
+      constructor: (loadQueue, @parent, deferred, @loadOptions) ->
         extend this, boundFns(loadQueue)
+        {promise, resolve, reject} = deferred
         for fn in ['then', 'catch']
           do (fn) =>
             @[fn] = (args...) ->
@@ -89,8 +90,8 @@ The LoadResult is the result of calling `load()`. It implements a promise API.
 A Group is a type of LoadResult that groups other LoadResults.
 
     class Group extends LoadResult
-      constructor: (loadQueue, parent, promise, resolve, reject) ->
-        super loadQueue, parent, promise, resolve, reject
+      constructor: (loadQueue, parent, deferred) ->
+        super loadQueue, parent, deferred
         @_group = []
 
       append: (loadResult) -> @_group.push loadResult
@@ -170,8 +171,8 @@ managing the timing of the loading of assets.
         this
 
       _createGroup: (parent) ->
-        [promise, resolve, reject] = createPromise @options.Promise
-        new Group this, parent, promise, resolve, reject
+        deferred = createDeferred @options.Promise
+        new Group this, parent, deferred
 
       _createLoadResult: (urlOrOpts, opts) ->
         newOpts =
@@ -179,15 +180,15 @@ managing the timing of the loading of assets.
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
-        [promise, resolve, reject] = createPromise @options.Promise
+        deferred = createDeferred @options.Promise
         onItemDone = =>
           if (index = @loading.indexOf opts) != 1
             # Remove the item from the list.
             @loading.splice index, 1
           # Load the next item.
           @_loadNext()
-        promise.then onItemDone, onItemDone
-        new LoadResult this, @_getGroup(), promise, resolve, reject, newOpts
+        deferred.promise.then onItemDone, onItemDone
+        new LoadResult this, @_getGroup(), deferred, newOpts
 
       _getGroup: ->
         @_currentGroup ?= @_createGroup @_queueGroup
