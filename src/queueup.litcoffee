@@ -141,7 +141,7 @@ managing the timing of the loading of assets.
           @options[k] = v
         this
 
-      use: (type, loader) ->
+      register: (type, loader) ->
         @options.loaders ?= {}
         @options.loaders[type] = loader
         this
@@ -241,9 +241,10 @@ The queueup module itself is a factory for other load queues.
 
     module.exports = queueup
 
-Register loaders globally with queueup.use.
+
+Register loaders globally with queueup.register.
 
 
-    queueup.use = (type, loader) ->
+    queueup.register = (type, loader) ->
       LoadQueue::defaultOptions.loaders[type] = loader
       return this
