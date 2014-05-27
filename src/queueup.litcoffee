@@ -1,4 +1,5 @@
     Promise = require './Promise'
+    extend = require 'xtend/mutable'
 
 
     class Deferred
@@ -32,12 +33,6 @@
     EXT_RE = /\.([^.]+?)(\?.*)?$/
 
     counter = 0
-
-    extend = (target, sources...) ->
-      for source in sources by -1
-        for own k, v of source
-          target[k] = v
-      target
 
     boundFns = (obj) ->
       result = {}

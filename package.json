@@ -10,7 +10,8 @@
     "test": "test"
   },
   "dependencies": {
-    "es6-promise": "~1.0.0"
+    "es6-promise": "~1.0.0",
+    "xtend": "^3.0.0"
   },
   "devDependencies": {
     "mocha": "~1.13.0",
