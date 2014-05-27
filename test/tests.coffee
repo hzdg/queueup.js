@@ -29,17 +29,12 @@ describe 'a LoadResult', ->
 
 
 describe 'a queue', ->
+  loadQueue = null
   beforeEach ->
-    @defaultLoaders = {}
-    for k, v of queueup.LoadQueue::defaultOptions.loaders
-      @defaultLoaders[k] = v
-    queueup.register 'image', mockLoader
-  afterEach ->
-    queueup.LoadQueue::defaultOptions.loader = @defaultLoaders
+    loadQueue = queueup().registerLoader 'image', mockLoader
 
   it 'should detect image extensions', ->
-    queue = queueup()
-    assert.equal queue._getType(test), 'image' for test in [
+    assert.equal loadQueue._getType(test), 'image' for test in [
       {url: 'test.png'}
       {url: 'test.jpg'}
       {url: 'test.jpeg'}
@@ -49,39 +44,33 @@ describe 'a queue', ->
     ]
 
   it 'should detect html extensions', ->
-    queue = queueup()
-    assert.equal queue._getType(test), 'html' for test in [
+    assert.equal loadQueue._getType(test), 'html' for test in [
       {url: 'my_file.html'}
       {type: 'html'}
     ]
 
   it 'should error when extension cannot be matched to a type', ->
-    fn = -> queueup()._getType(url: 'something')
+    fn = => loadQueue._getType(url: 'something')
     assert.Throw fn, "Couldn't determine type of something"
 
   it "should error when a loader isn't registered for a type", ->
-    fn = -> queueup()._getLoader type: 'fake', url: 'thing.fake'
+    fn = => loadQueue._getLoader type: 'fake', url: 'thing.fake'
     assert.Throw fn, 'A loader to handle thing.fake could not be found'
 
-  it 'should use a global loader for a given type', ->
-    assert.equal queueup()._getLoader(url: 'thing.png'), mockLoader
-
   it 'should use a loader for a given type', ->
-    queue = queueup().register 'image', loader = ->
-    assert.equal queue._getLoader(url: 'thing.png'), loader
-    queueup.register 'image', null
-    assert.equal queue._getLoader(url: 'thing.png'), loader
+    loadQueue.registerLoader 'image', loader = ->
+    assert.equal loadQueue._getLoader(url: 'thing.png'), loader
 
-  it 'should handle errors from loaders', (done) ->
-    queueup()
-      .register('image', (opts, cb) -> cb(new Error 'test'))
+  it 'should handle errors from loaders', (done) -> do (loadQueue) ->
+    loadQueue
+      .registerLoader('image', (opts, cb) -> cb(new Error 'test'))
       .load('assets/DOES-NOT-EXIST.jpg')
       .then ->
         done new Error 'Promise was resolved'
-      .catch (error) ->
+      .catch (error) =>
         assert.equal error.message, 'test'
-        queueup()
-          .register('image', (opts, cb) -> throw new Error 'test2')
+        loadQueue
+          .registerLoader('image', (opts, cb) -> throw new Error 'test2')
           .load('assets/DOES-NOT-EXIST.jpg')
           .then ->
             done new Error 'Promise was resolved'
@@ -92,7 +81,8 @@ describe 'a queue', ->
 
   it 'should load in the correct order', (done) ->
     complete = {}
-    queueup(simultaneous: 1)
+    loadQueue.config simultaneous: 1
+    loadQueue
       .load('assets/1.png')
         .then ->
           if complete.asset2
@@ -107,7 +97,8 @@ describe 'a queue', ->
 
   it 'should be able to promote assets', (done) ->
     complete = {}
-    queueup(simultaneous: 1)
+    loadQueue.config simultaneous: 1
+    loadQueue
       .load('assets/1.png')
         .then ->
           complete.asset1 = true
@@ -120,16 +111,21 @@ describe 'a queue', ->
       .start()
 
   it 'should autostart', (done) ->
-    queueup(autostart: true)
+    loadQueue.config autostart: true
+    loadQueue
       .load('assets/1.png')
         .then(-> done())
 
 
 describe 'a group', ->
+  loadQueue = null
+
+  beforeEach ->
+    loadQueue = queueup().registerLoader 'image', mockLoader
 
   it 'should complete when its assets complete', (done) ->
     complete = {}
-    queueup()
+    loadQueue
       .group()
         .load('assets/1.png')
           .then(-> complete.asset1 = true)
@@ -144,7 +140,7 @@ describe 'a group', ->
       .start()
 
   it 'should make a new group after endGroup', ->
-    g1 = queueup()
+    g1 = loadQueue
       .load('assets/1.png')
       .endGroup()
     g2 = g1
@@ -167,7 +163,8 @@ describe 'a group', ->
 
   it 'should yield control to its parent', (done) ->
     complete = {}
-    queueup(simultaneous: 1)
+    loadQueue.config simultaneous: 1
+    loadQueue
       .group()
         .load('assets/1.png')
           .then(-> complete.asset1 = true)

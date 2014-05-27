@@ -91,7 +91,7 @@ The LoadQueue is the workhorse for queueup. It's the object responsible for
 managing the timing of the loading of assets.
 
     class LoadQueue
-      defaultOptions:
+      @defaultOptions =
         Promise: Promise
         autostart: false
         simultaneous: 6  # The maximum number of items to load at once
@@ -102,18 +102,16 @@ managing the timing of the loading of assets.
 
       constructor: (opts) ->
         @loading = []
-        @config opts
-        @_queueGroup = @_createGroup()
+        @_options = extend {}, LoadQueue.defaultOptions, opts
+        _queueGroup = @_createGroup()
 
       config: (opts) ->
-        @options ?= {}
-        for own k, v of opts
-          @options[k] = v
-        this
+        if opts? then extend @_options, opts
+        extend {}, @_options
 
-      register: (type, loader) ->
-        @options.loaders ?= {}
-        @options.loaders[type] = loader
+      registerLoader: (type, loader) ->
+        @_options.loaders ?= {}
+        @_options.loaders[type] = loader
         this
 
       group: ->
@@ -126,7 +124,7 @@ managing the timing of the loading of assets.
         oldGroup = @_getGroup()
         @_currentGroup = oldGroup.parent
         # Set up the group's promise resolution
-        groupPromises(@_getOption('Promise'), oldGroup._group...)
+        groupPromises(@_options.Promise, oldGroup._group...)
           .then oldGroup._resolve, oldGroup._reject
         oldGroup
 
@@ -134,18 +132,15 @@ managing the timing of the loading of assets.
       load: (args...) ->
         result = @_createLoadResult args...
         @_getGroup().append result
-        @_loadNext() if @_getOption 'autostart'
+        @_loadNext() if @_options.autostart
         result
 
       start: ->
         @_loadNext()
         this
 
-      _getOption: (option) ->
-        @options[option] ? @defaultOptions[option]
-
       _createGroup: (parent) ->
-        deferred = new Deferred @_getOption 'Promise'
+        deferred = new Deferred @_options.Promise
         new Group this, parent, deferred
 
       _createLoadResult: (urlOrOpts, opts) ->
@@ -154,7 +149,7 @@ managing the timing of the loading of assets.
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
-        deferred = new Deferred @_getOption 'Promise'
+        deferred = new Deferred @_options.Promise
         onItemDone = =>
           if (index = @loading.indexOf opts) != 1
             # Remove the item from the list.
@@ -168,7 +163,7 @@ managing the timing of the loading of assets.
         @_currentGroup ?= @_createGroup @_queueGroup
 
       _getLoader: (opts) ->
-        loader = opts?.loader ? @_getOption('loaders')[@_getType opts]
+        loader = opts?.loader ? @_options.loaders[@_getType opts]
         unless loader
             throw new Error "A loader to handle #{opts.url} could not be found"
         loader
@@ -176,12 +171,12 @@ managing the timing of the loading of assets.
       _getType: (opts) ->
         return opts.type if opts?.type?
         ext = opts.url?.match(EXT_RE)?[1].toLowerCase()
-        for k, v of @_getOption 'extensions'
+        for k, v of @_options.extensions
           return k if ext in v
         throw new Error "Couldn't determine type of #{ opts.url }"
 
       _loadNext: =>
-        return unless @loading.length < @_getOption 'simultaneous'
+        return unless @loading.length < @_options.simultaneous
         if next = @_getGroup().next()
           try
             @_loadNow next
@@ -210,11 +205,3 @@ The queueup module itself is a factory for other load queues.
     queueup.LoadQueue = LoadQueue
 
     module.exports = queueup
-
-
-Register loaders globally with queueup.register.
-
-
-    queueup.register = (type, loader) ->
-      LoadQueue::defaultOptions.loaders[type] = loader
-      return this
