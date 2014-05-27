@@ -39,29 +39,6 @@
           target[k] = v
       target
 
-    loadImage = (opts, cb) ->
-      img = new Image
-      img.onload = ->
-        if ('naturalWidth' of this and (@naturalWidth + @naturalHeight == 0)) or (@width + @height == 0)
-          cb new Error "Image <#{ opts.url }> could not be loaded."
-        else
-          cb null, img
-      img.onerror = cb
-      img.src = opts.url
-      return
-
-    loadHtml = (opts, cb) ->
-      xhr = new XMLHttpRequest
-      xhr.onreadystatechange = ->
-        if xhr.readyState == 4
-          if xhr.status == 200
-            cb null, xhr.responseText
-          else
-            cb new Error "URL <#{ opts.url }> failed with status #{ xhr.status }."
-      xhr.open 'GET', opts.url, true
-      xhr.send()
-      return
-
     boundFns = (obj) ->
       result = {}
       for k, v of obj
@@ -123,9 +100,7 @@ managing the timing of the loading of assets.
         Promise: Promise
         autostart: false
         simultaneous: 6  # The maximum number of items to load at once
-        loaders:
-          image: loadImage
-          html: loadHtml
+        loaders: {}
         extensions:
           image: ['png', 'jpg', 'jpeg', 'gif', 'svg']
           html: ['html']
