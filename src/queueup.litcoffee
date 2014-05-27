@@ -90,8 +90,8 @@ The LoadResult is the result of calling `load()`. It implements a promise API.
 A Group is a type of LoadResult that groups other LoadResults.
 
     class Group extends LoadResult
-      constructor: (loadQueue, parent, promise, @resolve, @reject) ->
-        super loadQueue, parent, promise
+      constructor: (loadQueue, parent, promise, resolve, reject) ->
+        super loadQueue, parent, promise, resolve, reject
         @_group = []
 
       append: (loadResult) -> @_group.push loadResult
@@ -156,7 +156,7 @@ managing the timing of the loading of assets.
         @_currentGroup = oldGroup.parent
         # Set up the group's promise resolution
         groupPromises(@options.Promise, oldGroup._group...)
-          .then oldGroup.resolve, oldGroup.reject
+          .then oldGroup._resolve, oldGroup._reject
         oldGroup
 
       # TODO: Take option to prepend instead of append?
