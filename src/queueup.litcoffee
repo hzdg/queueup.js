@@ -209,7 +209,7 @@ managing the timing of the loading of assets.
             @_loadNow next
           catch err
             console?.warn? "Error: #{ err.message }"
-            next._fail err
+            next._reject err
 
           # Keep calling recursively until we're loading the max we can.
           @_loadNext()
