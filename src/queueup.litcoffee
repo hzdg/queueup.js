@@ -81,8 +81,8 @@ The LoadResult is the result of calling `load()`. It implements a promise API.
             @[k] = (args...) ->
               promise[v] args...
               this
-        @_done = (args...) -> resolve args...
-        @_fail = (args...) -> reject args...
+        @_resolve = (args...) -> resolve args...
+        @_reject = (args...) -> reject args...
         # @state = -> promise.state() # FIXME: Do we need this?
       promote: -> @parent._promote this
       cancel: -> throw new Error 'not implemented'
@@ -218,8 +218,8 @@ managing the timing of the loading of assets.
         opts = resultObj.loadOptions
         @loading.push opts
         loader = @_getLoader opts
-        loader(opts, resultObj._done, resultObj._fail)
-          ?.then? resultObj._done, resultObj._fail  # If a promise is returned, use it.
+        loader(opts, resultObj._resolve, resultObj._reject)
+          ?.then? resultObj._resolve, resultObj._reject  # If a promise is returned, use it.
 
 
 The queueup module itself is a factory for other load queues.
