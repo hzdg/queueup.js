@@ -40,25 +40,25 @@
           target[k] = v
       target
 
-    loadImage = (opts, done, fail) ->
+    loadImage = (opts, cb) ->
       img = new Image
       img.onload = ->
         if ('naturalWidth' of this and (@naturalWidth + @naturalHeight == 0)) or (@width + @height == 0)
-          fail new Error "Image <#{ opts.url }> could not be loaded."
+          cb new Error "Image <#{ opts.url }> could not be loaded."
         else
-          done img
-      img.onerror = fail
+          cb null, img
+      img.onerror = cb
       img.src = opts.url
       return
 
-    loadHtml = (opts, done, fail) ->
+    loadHtml = (opts, cb) ->
       xhr = new XMLHttpRequest
       xhr.onreadystatechange = ->
         if xhr.readyState == 4
           if xhr.status == 200
-            done xhr.responseText
+            cb null, xhr.responseText
           else
-            fail new Error "URL <#{ opts.url }> failed with status #{ xhr.status }."
+            cb new Error "URL <#{ opts.url }> failed with status #{ xhr.status }."
       xhr.open 'GET', opts.url, true
       xhr.send()
       return
@@ -218,7 +218,10 @@ managing the timing of the loading of assets.
         opts = resultObj.loadOptions
         @loading.push opts
         loader = @_getLoader opts
-        loader(opts, resultObj._resolve, resultObj._reject)
+        callback = (err, result) ->
+          if err then resultObj._reject err
+          else resultObj._resolve result
+        loader(opts, callback)
           ?.then? resultObj._resolve, resultObj._reject  # If a promise is returned, use it.
 
 
