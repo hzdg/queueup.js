@@ -156,7 +156,7 @@ managing the timing of the loading of assets.
         oldGroup = @_getGroup()
         @_currentGroup = oldGroup.parent
         # Set up the group's promise resolution
-        groupPromises(@options.Promise, oldGroup._group...)
+        groupPromises(@_getOption('Promise'), oldGroup._group...)
           .then oldGroup._resolve, oldGroup._reject
         oldGroup
 
@@ -175,7 +175,7 @@ managing the timing of the loading of assets.
         @options[option] ? @defaultOptions[option]
 
       _createGroup: (parent) ->
-        deferred = new Deferred @options.Promise
+        deferred = new Deferred @_getOption 'Promise'
         new Group this, parent, deferred
 
       _createLoadResult: (urlOrOpts, opts) ->
@@ -184,7 +184,7 @@ managing the timing of the loading of assets.
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
-        deferred = new Deferred @options.Promise
+        deferred = new Deferred @_getOption 'Promise'
         onItemDone = =>
           if (index = @loading.indexOf opts) != 1
             # Remove the item from the list.
