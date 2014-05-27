@@ -13,7 +13,7 @@
       failed = false
       [promise, resolve, reject] = createPromise Promise
       results = new Array promises.length
-      checkDeferred = ->
+      checkPromises = ->
         return if failed
         if count == promises.length
           resolve results...
@@ -22,7 +22,7 @@
           p.then (args...) ->
             results[i] = args
             count += 1
-            checkDeferred()
+            checkPromises()
           p['catch'] (args...) ->
             failed = true
             count += 1
