@@ -23,7 +23,7 @@
             results[i] = args
             count += 1
             checkPromises()
-          p['catch'] (args...) ->
+          p.catch (args...) ->
             failed = true
             count += 1
             reject args...
