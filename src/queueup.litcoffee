@@ -76,10 +76,10 @@ The LoadResult is the result of calling `load()`. It implements a promise API.
     class LoadResult
       constructor: (loadQueue, @parent, promise, resolve, reject, @loadOptions) ->
         extend this, boundFns(loadQueue)
-        for k, v of {then: 'then', catch: 'catch'}
-          do (k, v) =>
-            @[k] = (args...) ->
-              promise[v] args...
+        for fn in ['then', 'catch']
+          do (fn) =>
+            @[fn] = (args...) ->
+              promise[fn] args...
               this
         @_resolve = (args...) -> resolve args...
         @_reject = (args...) -> reject args...
