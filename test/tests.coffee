@@ -17,8 +17,19 @@ describe 'the module', ->
     assert.notEqual queueup(), queueup()
 
 
-describe 'extensions', ->
+describe 'a LoadResult', ->
+  loadResult = queueup()
+    .load(uncached 'assets/1.png')
 
+  it 'should be a promise', ->
+    assert.typeOf loadResult.then, 'function'
+  it 'should expose the LoadQueue API', ->
+    assert.typeOf loadResult.start, 'function'
+  it 'should be chainable', ->
+    assert.equal loadResult, loadResult.then $.noop
+
+
+describe 'a queue', ->
   it 'should detect image extensions', ->
     queue = queueup()
     assert.equal queue._getType(test), 'image' for test in [
@@ -41,9 +52,6 @@ describe 'extensions', ->
     fn = -> queueup()._getType(url: 'something')
     assert.Throw fn, "Couldn't determine type of something"
 
-
-describe 'loaders', ->
-
   it "should error when a loader isn't registered for a type", ->
     fn = -> queueup()._getLoader type: 'fake', url: 'thing.fake'
     assert.Throw fn, 'A loader to handle thing.fake could not be found'
@@ -59,20 +67,6 @@ describe 'loaders', ->
     queueup.use 'image', null
     assert.equal queue._getLoader(url: 'thing.png'), loader
 
-
-describe 'a LoadResult', ->
-  loadResult = queueup()
-    .load(uncached 'assets/1.png')
-
-  it 'should be a promise', ->
-    assert.typeOf loadResult.then, 'function'
-  it 'should expose the LoadQueue API', ->
-    assert.typeOf loadResult.start, 'function'
-  it 'should be chainable', ->
-    assert.equal loadResult, loadResult.then $.noop
-
-
-describe 'a queue', ->
   it 'should load a PNG', (done) ->
     queueup()
       .load(uncached 'assets/1.png')
