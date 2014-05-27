@@ -1,17 +1,16 @@
     Promise = require './Promise'
 
 
-    createDeferred = (Promise) ->
-      unless Promise
-        throw new Error "Environment doesn't support Promises; you must provide a Promise option."
-      resolve = reject = null
-      promise = new Promise (a, b) -> resolve = a; reject = b
-      {promise, resolve, reject}
+    class Deferred
+      constructor: (Promise) ->
+        unless Promise
+          throw new Error "Environment doesn't support Promises; you must provide a Promise option."
+        @promise = new Promise (a, b) => @resolve = a; @reject = b
 
     groupPromises = (Promise, promises...) ->
       count = 0
       failed = false
-      {promise, resolve, reject} = createDeferred Promise
+      {promise, resolve, reject} = new Deferred Promise
       results = new Array promises.length
       checkPromises = ->
         return if failed
@@ -171,7 +170,7 @@ managing the timing of the loading of assets.
         this
 
       _createGroup: (parent) ->
-        deferred = createDeferred @options.Promise
+        deferred = new Deferred @options.Promise
         new Group this, parent, deferred
 
       _createLoadResult: (urlOrOpts, opts) ->
@@ -180,7 +179,7 @@ managing the timing of the loading of assets.
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
-        deferred = createDeferred @options.Promise
+        deferred = new Deferred @options.Promise
         onItemDone = =>
           if (index = @loading.indexOf opts) != 1
             # Remove the item from the list.
