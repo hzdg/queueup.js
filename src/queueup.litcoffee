@@ -83,7 +83,6 @@ The LoadResult is the result of calling `load()`. It implements a promise API.
               this
         @_resolve = (value) -> resolve value
         @_reject = (reason) -> reject reason
-        # @state = -> promise.state() # FIXME: Do we need this?
       promote: -> @parent._promote this
       cancel: -> throw new Error 'not implemented'
 
