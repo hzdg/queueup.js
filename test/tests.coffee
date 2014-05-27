@@ -39,9 +39,9 @@ describe 'a queue', ->
   it 'should error for nonexistent assets', (done) ->
     queueup()
       .load(uncached 'assets/DOES-NOT-EXIST.jpg')
-      .done ->
+      .then ->
         done new Error 'Promise was resolved'
-      .fail ->
+      .catch ->
         done()
       .start()
 

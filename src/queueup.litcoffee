@@ -1,24 +1,33 @@
+    Promise = require './Promise'
 
-    groupPromises = (Deferred, promises...) ->
+
+    createPromise = (Promise) ->
+      unless Promise
+        throw new Error "Environment doesn't support Promises; you must provide a Promise option."
+      resolve = reject = null
+      promise = new Promise (a, b) -> resolve = a; reject = b
+      [promise, resolve, reject]
+
+    groupPromises = (Promise, promises...) ->
       count = 0
       failed = false
-      deferred = Deferred()
+      [promise, resolve, reject] = createPromise Promise
       results = new Array promises.length
       checkDeferred = ->
         return if failed
         if count == promises.length
-          deferred.resolve results...
+          resolve results...
       for p, i in promises
         do (i) ->
           p.then (args...) ->
             results[i] = args
             count += 1
             checkDeferred()
-          p.fail (args...) ->
+          p['catch'] (args...) ->
             failed = true
             count += 1
-            deferred.reject args...
-      deferred.promise()
+            reject args...
+      promise
 
 
     EXT_RE = /\.([^.]+?)(\?.*)?$/
@@ -65,25 +74,24 @@
 The LoadResult is the result of calling `load()`. It implements a promise API.
 
     class LoadResult
-      constructor: (loadQueue, @parent, deferred, @loadOptions) ->
+      constructor: (loadQueue, @parent, promise, resolve, reject, @loadOptions) ->
         extend this, boundFns(loadQueue)
-        promise = deferred.promise()
-        for fn in ['then', 'fail', 'done']
+        for fn in ['then', 'catch']
           do (fn) =>
             @[fn] = (args...) ->
               promise[fn] args...
               this
-        @_done = (args...) -> deferred.resolve args...
-        @_fail = (args...) -> deferred.reject args...
-        @state = -> promise.state()
+        @_resolve = (value) -> resolve value
+        @_reject = (reason) -> reject reason
+        # @state = -> promise.state() # FIXME: Do we need this?
       promote: -> @parent._promote this
       cancel: -> throw new Error 'not implemented'
 
 A Group is a type of LoadResult that groups other LoadResults.
 
     class Group extends LoadResult
-      constructor: (loadQueue, parent, promise, @resolve, @reject) ->
-        super loadQueue, parent, promise
+      constructor: (loadQueue, parent, promise, resolve, reject) ->
+        super loadQueue, parent, promise, resolve, reject
         @_group = []
 
       append: (loadResult) -> @_group.push loadResult
@@ -113,7 +121,7 @@ managing the timing of the loading of assets.
 
     class LoadQueue
       defaultOptions:
-        Deferred: $?.Deferred
+        Promise: Promise
         autostart: false
         simultaneous: 6  # The maximum number of items to load at once
         loaders:
@@ -147,9 +155,8 @@ managing the timing of the loading of assets.
         oldGroup = @_getGroup()
         @_currentGroup = oldGroup.parent
         # Set up the group's promise resolution
-        groupPromises(@options.Deferred, oldGroup._group...)
-          .done(oldGroup.resolve)
-          .fail(oldGroup.reject)
+        groupPromises(@options.Promise, oldGroup._group...)
+          .then oldGroup._resolve, oldGroup._reject
         oldGroup
 
       # TODO: Take option to prepend instead of append?
@@ -164,9 +171,8 @@ managing the timing of the loading of assets.
         this
 
       _createGroup: (parent) ->
-        deferred = @options.Deferred()
-        promise = deferred.promise()
-        new Group this, parent, promise, deferred.resolve, deferred.reject
+        [promise, resolve, reject] = createPromise @options.Promise
+        new Group this, parent, promise, resolve, reject
 
       _createLoadResult: (urlOrOpts, opts) ->
         newOpts =
@@ -174,8 +180,7 @@ managing the timing of the loading of assets.
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
-        deferred = @options.Deferred()
-        promise = deferred.promise()
+        [promise, resolve, reject] = createPromise @options.Promise
         onItemDone = =>
           if (index = @loading.indexOf opts) != 1
             # Remove the item from the list.
@@ -183,7 +188,7 @@ managing the timing of the loading of assets.
           # Load the next item.
           @_loadNext()
         promise.then onItemDone, onItemDone
-        new LoadResult this, @_getGroup(), deferred, newOpts
+        new LoadResult this, @_getGroup(), promise, resolve, reject, newOpts
 
       _getGroup: ->
         @_currentGroup ?= @_createGroup @_queueGroup
@@ -213,8 +218,8 @@ managing the timing of the loading of assets.
         opts = resultObj.loadOptions
         @loading.push opts
         loader = @_getLoader opts
-        loader(opts, resultObj._done, resultObj._fail)
-          ?.then? resultObj._done, resultObj._fail  # If a promise is returned, use it.
+        loader(opts, resultObj._resolve, resultObj._reject)
+          ?.then? resultObj._resolve, resultObj._reject  # If a promise is returned, use it.
 
 
 The queueup module itself is a factory for other load queues.
