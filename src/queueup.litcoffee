@@ -8,31 +8,7 @@
           throw new Error "Environment doesn't support Promises; you must provide a Promise option."
         @promise = new Promise (a, b) => @resolve = a; @reject = b
 
-    groupPromises = (Promise, promises...) ->
-      count = 0
-      failed = false
-      {promise, resolve, reject} = new Deferred Promise
-      results = new Array promises.length
-      checkPromises = ->
-        return if failed
-        if count == promises.length
-          resolve results...
-      for p, i in promises
-        do (i) ->
-          p.then (args...) ->
-            results[i] = args
-            count += 1
-            checkPromises()
-          p.catch (args...) ->
-            failed = true
-            count += 1
-            reject args...
-      promise
-
-
     EXT_RE = /\.([^.]+?)(\?.*)?$/
-
-    counter = 0
 
     boundFns = (obj) ->
       result = {}
@@ -124,7 +100,7 @@ managing the timing of the loading of assets.
         oldGroup = @_getGroup()
         @_currentGroup = oldGroup.parent
         # Set up the group's promise resolution
-        groupPromises(@_options.Promise, oldGroup._group...)
+        @_options.Promise.all(oldGroup._group)
           .then oldGroup._resolve, oldGroup._reject
         oldGroup
 
