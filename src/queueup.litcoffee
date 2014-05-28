@@ -31,7 +31,7 @@ managing the timing of the loading of assets.
       startGroup: ->
         parent = @_getGroup()
         group = @_createGroup parent
-        parent?.append group
+        parent?.add group
         @_currentGroup = group
 
       endGroup: ->
@@ -45,10 +45,9 @@ managing the timing of the loading of assets.
           .then oldGroup._resolve, oldGroup._reject
         oldGroup
 
-      # TODO: Take option to prepend instead of append?
       load: (args...) ->
         result = @_createLoadResult args...
-        @_getGroup().append result
+        @_getGroup().add result
         @_loadNext() if @_options.autostart
         result
 
@@ -137,9 +136,7 @@ A Group is a type of LoadResult that groups other LoadResults.
         super loadQueue, parent, deferred
         @_group = []
 
-      append: (loadResult) -> @_group.push loadResult
-
-      prepend: (loadResult) -> @_group.unshift loadResult
+      add: (loadResult) -> @_group.push loadResult
 
       next: ->
         if @_group.length and @_group[0].next
