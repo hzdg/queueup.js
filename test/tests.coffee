@@ -126,7 +126,7 @@ describe 'a group', ->
   it 'should complete when its assets complete', (done) ->
     complete = {}
     loadQueue
-      .group()
+      .startGroup()
         .load('assets/1.png')
           .then(-> complete.asset1 = true)
         .load('assets/2.png')
@@ -147,7 +147,7 @@ describe 'a group', ->
       .load('assets/2.png')
       .endGroup()
     g3 = g2
-      .group()
+      .startGroup()
         .load('assets/3.png')
         .endGroup()
     g4 = g3
@@ -165,7 +165,7 @@ describe 'a group', ->
     complete = {}
     loadQueue.config simultaneous: 1
     loadQueue
-      .group()
+      .startGroup()
         .load('assets/1.png')
           .then(-> complete.asset1 = true)
         .load('assets/2.png')
@@ -179,7 +179,7 @@ describe 'a group', ->
               done()
             else
               done new Error 'First group loaded first.'
-      .group()
+      .startGroup()
         .load('assets/3.png')
           .then(-> complete.asset3 = true)
         .endGroup()

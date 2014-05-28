@@ -28,7 +28,7 @@ managing the timing of the loading of assets.
         @_options.loaders[type] = loader
         this
 
-      group: ->
+      startGroup: ->
         parent = @_getGroup()
         group = @_createGroup parent
         parent.append group
