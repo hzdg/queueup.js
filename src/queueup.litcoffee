@@ -126,6 +126,11 @@ The LoadResult is the result of calling `load()`. It implements a promise API.
               this
         @_resolve = (value) -> resolve value
         @_reject = (reason) -> reject reason
+
+        priority = @loadOptions?.priority ? 0
+        @priority = (value) ->
+          if value? then priority = value
+          else priority
       promote: -> @parent._promote this
       cancel: -> throw new Error 'not implemented'
 
@@ -139,14 +144,29 @@ A Group is a type of LoadResult that groups other LoadResults.
       add: (loadResult) -> @_group.push loadResult
 
       next: ->
-        if @_group.length and @_group[0].next
+        return unless @_group.length
+
+        # Look for the next item based on priority.
+        nextItem = null
+        nextItemIndex = -1
+        p = 0
+        for item, i in @_group
+          itemPriority = item.priority()
+          if not nextItem or itemPriority > p
+            nextItem = item
+            p = itemPriority
+            nextItemIndex = i
+
+        if nextItem.next
           # If next is a nested group, return its next item, if it has one.
-          return next if next = @_group[0].next()
+          return next if next = nextItem.next()
           # TODO: resolve nested group?
           # If the nested group was empty, discard it and call next again.
-          @_group.shift()
-          return @next()
-        @_group.shift()
+          @_group.splice nextItemIndex, 1
+          @next()
+        else if nextItem
+          @_group.splice nextItemIndex, 1
+          nextItem
 
       # Promote an asset in the group.
       # If the asset is already at the 'head' or already loaded, this is a noop.
