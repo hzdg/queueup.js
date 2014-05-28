@@ -3,7 +3,7 @@ assert = chai.assert
 
 t = new Date().getTime()
 count = 0
-uncached = (name) -> "#{ name }?#{ t }-#{ count += 1 }"
+mockLoader = (opts, cb) -> setTimeout cb, 0
 
 
 describe 'the module', ->
@@ -18,8 +18,7 @@ describe 'the module', ->
 
 
 describe 'a LoadResult', ->
-  loadResult = queueup()
-    .load(uncached 'assets/1.png')
+  loadResult = queueup().load 'test'
 
   it 'should be a promise', ->
     assert.typeOf loadResult.then, 'function'
@@ -30,36 +29,66 @@ describe 'a LoadResult', ->
 
 
 describe 'a queue', ->
-  it 'should load a PNG', (done) ->
-    queueup()
-      .load(uncached 'assets/1.png')
-        .then(-> done())
-      .start()
+  loadQueue = null
+  beforeEach ->
+    loadQueue = queueup().registerLoader 'image', mockLoader
 
-  it 'should error for nonexistent assets', (done) ->
-    queueup()
-      .load(uncached 'assets/DOES-NOT-EXIST.jpg')
+  it 'should detect image extensions', ->
+    assert.equal loadQueue._getType(test), 'image' for test in [
+      {url: 'test.png'}
+      {url: 'test.jpg'}
+      {url: 'test.jpeg'}
+      {url: 'test.gif'}
+      {url: 'test.svg'}
+      {type: 'image'}
+    ]
+
+  it 'should detect html extensions', ->
+    assert.equal loadQueue._getType(test), 'html' for test in [
+      {url: 'my_file.html'}
+      {type: 'html'}
+    ]
+
+  it 'should error when extension cannot be matched to a type', ->
+    fn = => loadQueue._getType(url: 'something')
+    assert.Throw fn, "Couldn't determine type of something"
+
+  it "should error when a loader isn't registered for a type", ->
+    fn = => loadQueue._getLoader type: 'fake', url: 'thing.fake'
+    assert.Throw fn, 'A loader to handle thing.fake could not be found'
+
+  it 'should use a loader for a given type', ->
+    loadQueue.registerLoader 'image', loader = ->
+    assert.equal loadQueue._getLoader(url: 'thing.png'), loader
+
+  it 'should handle errors from loaders', (done) -> do (loadQueue) ->
+    loadQueue
+      .registerLoader('image', (opts, cb) -> cb(new Error 'test'))
+      .load('assets/DOES-NOT-EXIST.jpg')
       .then ->
         done new Error 'Promise was resolved'
-      .catch ->
-        done()
-      .start()
-
-  it 'should load HTML', (done) ->
-    queueup()
-      .load(uncached 'assets/1.html')
-        .then(-> done())
+      .catch (error) =>
+        assert.equal error.message, 'test'
+        loadQueue
+          .registerLoader('image', (opts, cb) -> throw new Error 'test2')
+          .load('assets/DOES-NOT-EXIST.jpg')
+          .then ->
+            done new Error 'Promise was resolved'
+          .catch (error) ->
+            done assert.equal error.message, 'test2'
+          .start()
       .start()
 
   it 'should load in the correct order', (done) ->
     complete = {}
-    queueup(simultaneous: 1)
-      .load(uncached 'assets/1.png')
+    loadQueue.config simultaneous: 1
+    loadQueue
+      .load('assets/1.png')
         .then ->
           if complete.asset2
             done new Error 'Second asset loaded first.'
           complete.asset1 = true
-      .load(uncached 'assets/2.png')
+      .load('assets/2.png')
         .then ->
           unless complete.asset1
             done new Error 'First asset not loaded.'
@@ -68,11 +97,12 @@ describe 'a queue', ->
 
   it 'should be able to promote assets', (done) ->
     complete = {}
-    queueup(simultaneous: 1)
-      .load(uncached 'assets/1.png')
+    loadQueue.config simultaneous: 1
+    loadQueue
+      .load('assets/1.png')
         .then ->
           complete.asset1 = true
-      .load(uncached 'assets/2.png')
+      .load('assets/2.png')
         .then ->
           if complete.asset1
             done new Error "Promoted asset didn't load first"
@@ -81,20 +111,26 @@ describe 'a queue', ->
       .start()
 
   it 'should autostart', (done) ->
-    queueup(autostart: true)
-      .load(uncached 'assets/1.png')
+    loadQueue.config autostart: true
+    loadQueue
+      .load('assets/1.png')
         .then(-> done())
 
 
 describe 'a group', ->
+  loadQueue = null
+
+  beforeEach ->
+    loadQueue = queueup().registerLoader 'image', mockLoader
 
   it 'should complete when its assets complete', (done) ->
     complete = {}
-    queueup().group()
-      .load(uncached 'assets/1.png')
-        .then(-> complete.asset1 = true)
-      .load(uncached 'assets/2.png')
-        .then(-> complete.asset2 = true)
+    loadQueue
+      .group()
+        .load('assets/1.png')
+          .then(-> complete.asset1 = true)
+        .load('assets/2.png')
+          .then(-> complete.asset2 = true)
       .endGroup()
         .then ->
           if complete.asset1 and complete.asset2
@@ -104,18 +140,18 @@ describe 'a group', ->
       .start()
 
   it 'should make a new group after endGroup', ->
-    g1 = queueup()
-      .load(uncached 'assets/1.png')
+    g1 = loadQueue
+      .load('assets/1.png')
       .endGroup()
     g2 = g1
-      .load(uncached 'assets/2.png')
+      .load('assets/2.png')
       .endGroup()
     g3 = g2
       .group()
-        .load(uncached 'assets/3.png')
+        .load('assets/3.png')
         .endGroup()
     g4 = g3
-      .load(uncached 'assets/4.png')
+      .load('assets/4.png')
       .endGroup()
 
     checked = []
@@ -127,11 +163,12 @@ describe 'a group', ->
 
   it 'should yield control to its parent', (done) ->
     complete = {}
-    queueup(simultaneous: 1)
+    loadQueue.config simultaneous: 1
+    loadQueue
       .group()
-        .load(uncached 'assets/1.png')
+        .load('assets/1.png')
           .then(-> complete.asset1 = true)
-        .load(uncached 'assets/2.png')
+        .load('assets/2.png')
           .then ->
             complete.asset2 = true
             unless complete.asset3
@@ -143,7 +180,7 @@ describe 'a group', ->
             else
               done new Error 'First group loaded first.'
       .group()
-        .load(uncached 'assets/3.png')
+        .load('assets/3.png')
           .then(-> complete.asset3 = true)
         .endGroup()
         .promote()

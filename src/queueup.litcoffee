@@ -1,4 +1,5 @@
     Promise = require './Promise'
+    extend = require 'xtend/mutable'
 
 
     class Deferred
@@ -32,35 +33,6 @@
     EXT_RE = /\.([^.]+?)(\?.*)?$/
 
     counter = 0
-
-    extend = (target, sources...) ->
-      for source in sources by -1
-        for own k, v of source
-          target[k] = v
-      target
-
-    loadImage = (opts, cb) ->
-      img = new Image
-      img.onload = ->
-        if ('naturalWidth' of this and (@naturalWidth + @naturalHeight == 0)) or (@width + @height == 0)
-          cb new Error "Image <#{ opts.url }> could not be loaded."
-        else
-          cb null, img
-      img.onerror = cb
-      img.src = opts.url
-      return
-
-    loadHtml = (opts, cb) ->
-      xhr = new XMLHttpRequest
-      xhr.onreadystatechange = ->
-        if xhr.readyState == 4
-          if xhr.status == 200
-            cb null, xhr.responseText
-          else
-            cb new Error "URL <#{ opts.url }> failed with status #{ xhr.status }."
-      xhr.open 'GET', opts.url, true
-      xhr.send()
-      return
 
     boundFns = (obj) ->
       result = {}
@@ -119,29 +91,27 @@ The LoadQueue is the workhorse for queueup. It's the object responsible for
 managing the timing of the loading of assets.
 
     class LoadQueue
-      defaultOptions:
+      @defaultOptions =
         Promise: Promise
         autostart: false
         simultaneous: 6  # The maximum number of items to load at once
-        loaders:
-          image: loadImage
-          html: loadHtml
+        loaders: {}
         extensions:
           image: ['png', 'jpg', 'jpeg', 'gif', 'svg']
           html: ['html']
 
       constructor: (opts) ->
         @loading = []
-        @config opts
-        @_queueGroup = @_createGroup()
+        @_options = extend {}, LoadQueue.defaultOptions, opts
+        _queueGroup = @_createGroup()
 
       config: (opts) ->
-        unless @options
-          @options ?= {}
-          for own k, v of @defaultOptions
-            @options[k] = v
-        for own k, v of opts
-          @options[k] = v
+        if opts? then extend @_options, opts
+        extend {}, @_options
+
+      registerLoader: (type, loader) ->
+        @_options.loaders ?= {}
+        @_options.loaders[type] = loader
         this
 
       group: ->
@@ -154,7 +124,7 @@ managing the timing of the loading of assets.
         oldGroup = @_getGroup()
         @_currentGroup = oldGroup.parent
         # Set up the group's promise resolution
-        groupPromises(@options.Promise, oldGroup._group...)
+        groupPromises(@_options.Promise, oldGroup._group...)
           .then oldGroup._resolve, oldGroup._reject
         oldGroup
 
@@ -162,7 +132,7 @@ managing the timing of the loading of assets.
       load: (args...) ->
         result = @_createLoadResult args...
         @_getGroup().append result
-        @_loadNext() if @options.autostart
+        @_loadNext() if @_options.autostart
         result
 
       start: ->
@@ -170,7 +140,7 @@ managing the timing of the loading of assets.
         this
 
       _createGroup: (parent) ->
-        deferred = new Deferred @options.Promise
+        deferred = new Deferred @_options.Promise
         new Group this, parent, deferred
 
       _createLoadResult: (urlOrOpts, opts) ->
@@ -179,7 +149,7 @@ managing the timing of the loading of assets.
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
-        deferred = new Deferred @options.Promise
+        deferred = new Deferred @_options.Promise
         onItemDone = =>
           if (index = @loading.indexOf opts) != 1
             # Remove the item from the list.
@@ -192,17 +162,21 @@ managing the timing of the loading of assets.
       _getGroup: ->
         @_currentGroup ?= @_createGroup @_queueGroup
 
-      _getLoader: (opts) -> opts.loader ? @options.loaders[@_getType opts]
+      _getLoader: (opts) ->
+        loader = opts?.loader ? @_options.loaders[@_getType opts]
+        unless loader
+            throw new Error "A loader to handle #{opts.url} could not be found"
+        loader
 
       _getType: (opts) ->
         return opts.type if opts?.type?
         ext = opts.url?.match(EXT_RE)?[1].toLowerCase()
-        for k, v of @options.extensions
+        for k, v of @_options.extensions
           return k if ext in v
         throw new Error "Couldn't determine type of #{ opts.url }"
 
       _loadNext: =>
-        return unless @loading.length < @options.simultaneous
+        return unless @loading.length < @_options.simultaneous
         if next = @_getGroup().next()
           try
             @_loadNow next
