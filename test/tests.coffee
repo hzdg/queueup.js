@@ -123,6 +123,9 @@ describe 'a group', ->
   beforeEach ->
     loadQueue = queueup().registerLoader 'image', mockLoader
 
+  it 'should error when you close the last group', ->
+    assert.Throw -> loadQueue.endGroup()
+
   it 'should complete when its assets complete', (done) ->
     complete = {}
     loadQueue
@@ -138,28 +141,6 @@ describe 'a group', ->
           else
             done new Error 'Group completed before assets.'
       .start()
-
-  it 'should make a new group after endGroup', ->
-    g1 = loadQueue
-      .load 'assets/1.png'
-      .endGroup()
-    g2 = g1
-      .load 'assets/2.png'
-      .endGroup()
-    g3 = g2
-      .startGroup()
-        .load 'assets/3.png'
-        .endGroup()
-    g4 = g3
-      .load 'assets/4.png'
-      .endGroup()
-
-    checked = []
-    for g in [g1, g2, g3, g4]
-      assert typeof g.append is 'function'
-      assert g not in checked
-      checked.push g
-    return
 
   it 'should yield control to its parent', (done) ->
     complete = {}

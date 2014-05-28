@@ -17,7 +17,7 @@ managing the timing of the loading of assets.
       constructor: (opts) ->
         @loading = []
         @_options = extend {}, LoadQueue.defaultOptions, opts
-        _queueGroup = @_createGroup()
+        @startGroup()
 
       config: (opts) ->
         if opts? then extend @_options, opts
@@ -31,12 +31,15 @@ managing the timing of the loading of assets.
       startGroup: ->
         parent = @_getGroup()
         group = @_createGroup parent
-        parent.append group
+        parent?.append group
         @_currentGroup = group
 
       endGroup: ->
         oldGroup = @_getGroup()
         @_currentGroup = oldGroup.parent
+
+        throw new Error 'There is no open group.' unless @_currentGroup
+
         # Set up the group's promise resolution
         @_options.Promise.all(oldGroup._group)
           .then oldGroup._resolve, oldGroup._reject
@@ -74,7 +77,7 @@ managing the timing of the loading of assets.
         new LoadResult this, @_getGroup(), deferred, newOpts
 
       _getGroup: ->
-        @_currentGroup ?= @_createGroup @_queueGroup
+        @_currentGroup #?= @_createGroup @_queueGroup
 
       _getLoader: (opts) ->
         loader = opts?.loader ? @_options.loaders[@_getType opts]
