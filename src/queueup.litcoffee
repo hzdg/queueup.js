@@ -45,9 +45,32 @@ managing the timing of the loading of assets.
           .then oldGroup._resolve, oldGroup._reject
         oldGroup
 
+      enqueue: (fn, opts) ->
+        deferred = new Deferred @_options.Promise
+
+        # Wrap the function. This makes sure it's unique, and lets us add it to
+        # the loading list.
+        task = =>
+          callback = (err, res) ->
+            if err then deferred.reject err
+            else deferred.resolve res
+          @loading.push loadResult
+          fn(callback)?.then? deferred.resolve, deferred.reject  # If a promise is returned, use it.
+
+        onItemDone = =>
+          if (index = @loading.indexOf loadResult) isnt 1
+            # Remove the item from the list.
+            @loading.splice index, 1
+          # Load the next item.
+          @_loadNext()
+
+        deferred.promise.then onItemDone, onItemDone
+        loadResult = new LoadResult this, @_getGroup(), deferred, task, priority: opts?.priority
+        @_getGroup().add loadResult
+        loadResult
+
       load: (args...) ->
         result = @_createLoadResult args...
-        @_getGroup().add result
         @_loadNext() if @_options.autostart
         result
 
@@ -60,20 +83,21 @@ managing the timing of the loading of assets.
         new Group this, parent, deferred
 
       _createLoadResult: (urlOrOpts, opts) ->
-        newOpts =
+        opts =
           if typeof urlOrOpts is 'object'
             extend {}, urlOrOpts
           else
             extend {}, opts, url: urlOrOpts
-        deferred = new Deferred @_options.Promise
-        onItemDone = =>
-          if (index = @loading.indexOf opts) != 1
-            # Remove the item from the list.
-            @loading.splice index, 1
-          # Load the next item.
-          @_loadNext()
-        deferred.promise.then onItemDone, onItemDone
-        new LoadResult this, @_getGroup(), deferred, newOpts
+
+        queueOpts = priority: opts.priority
+        delete opts.priority
+        loaderOpts = opts
+
+        task = (cb) =>
+          loader = @_getLoader loaderOpts
+          loader loaderOpts, cb
+
+        resultObj = @enqueue task, queueOpts
 
       _getGroup: ->
         @_currentGroup #?= @_createGroup @_queueGroup
@@ -95,7 +119,7 @@ managing the timing of the loading of assets.
         return unless @loading.length < @_options.simultaneous
         if next = @_getGroup().next()
           try
-            @_loadNow next
+            next.task()
           catch err
             console?.warn? "Error: #{ err.message }"
             next._reject err
@@ -103,20 +127,10 @@ managing the timing of the loading of assets.
           # Keep calling recursively until we're loading the max we can.
           @_loadNext()
 
-      _loadNow: (resultObj) ->
-        opts = resultObj.loadOptions
-        @loading.push opts
-        loader = @_getLoader opts
-        callback = (err, result) ->
-          if err then resultObj._reject err
-          else resultObj._resolve result
-        loader(opts, callback)
-          ?.then? resultObj._resolve, resultObj._reject  # If a promise is returned, use it.
-
 The LoadResult is the result of calling `load()`. It implements a promise API.
 
     class LoadResult
-      constructor: (loadQueue, @parent, deferred, @loadOptions) ->
+      constructor: (loadQueue, @parent, deferred, @task, options) ->
         extend this, boundFns(loadQueue)
         {promise, resolve, reject} = deferred
         for fn in ['then', 'catch']
@@ -127,7 +141,7 @@ The LoadResult is the result of calling `load()`. It implements a promise API.
         @_resolve = (value) -> resolve value
         @_reject = (reason) -> reject reason
 
-        priority = @loadOptions?.priority ? 0
+        priority = options?.priority ? 0
         @priority = (value) ->
           if value? then priority = value
           else priority
