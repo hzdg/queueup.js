@@ -64,14 +64,14 @@ describe 'a queue', ->
   it 'should handle errors from loaders', (done) -> do (loadQueue) ->
     loadQueue
       .registerLoader('image', (opts, cb) -> cb(new Error 'test'))
-      .load('assets/DOES-NOT-EXIST.jpg')
+      .load 'assets/DOES-NOT-EXIST.jpg'
       .then ->
         done new Error 'Promise was resolved'
       .catch (error) =>
         assert.equal error.message, 'test'
         loadQueue
           .registerLoader('image', (opts, cb) -> throw new Error 'test2')
-          .load('assets/DOES-NOT-EXIST.jpg')
+          .load 'assets/DOES-NOT-EXIST.jpg'
           .then ->
             done new Error 'Promise was resolved'
           .catch (error) ->
@@ -83,12 +83,12 @@ describe 'a queue', ->
     complete = {}
     loadQueue.config simultaneous: 1
     loadQueue
-      .load('assets/1.png')
+      .load 'assets/1.png'
         .then ->
           if complete.asset2
             done new Error 'Second asset loaded first.'
           complete.asset1 = true
-      .load('assets/2.png')
+      .load 'assets/2.png'
         .then ->
           unless complete.asset1
             done new Error 'First asset not loaded.'
@@ -99,10 +99,10 @@ describe 'a queue', ->
     complete = {}
     loadQueue.config simultaneous: 1
     loadQueue
-      .load('assets/1.png')
+      .load 'assets/1.png'
         .then ->
           complete.asset1 = true
-      .load('assets/2.png')
+      .load 'assets/2.png'
         .then ->
           if complete.asset1
             done new Error "Promoted asset didn't load first"
@@ -113,8 +113,8 @@ describe 'a queue', ->
   it 'should autostart', (done) ->
     loadQueue.config autostart: true
     loadQueue
-      .load('assets/1.png')
-        .then(-> done())
+      .load 'assets/1.png'
+        .then -> done()
 
 
 describe 'a group', ->
@@ -127,10 +127,10 @@ describe 'a group', ->
     complete = {}
     loadQueue
       .startGroup()
-        .load('assets/1.png')
-          .then(-> complete.asset1 = true)
-        .load('assets/2.png')
-          .then(-> complete.asset2 = true)
+        .load 'assets/1.png'
+          .then -> complete.asset1 = true
+        .load 'assets/2.png'
+          .then -> complete.asset2 = true
       .endGroup()
         .then ->
           if complete.asset1 and complete.asset2
@@ -141,17 +141,17 @@ describe 'a group', ->
 
   it 'should make a new group after endGroup', ->
     g1 = loadQueue
-      .load('assets/1.png')
+      .load 'assets/1.png'
       .endGroup()
     g2 = g1
-      .load('assets/2.png')
+      .load 'assets/2.png'
       .endGroup()
     g3 = g2
       .startGroup()
-        .load('assets/3.png')
+        .load 'assets/3.png'
         .endGroup()
     g4 = g3
-      .load('assets/4.png')
+      .load 'assets/4.png'
       .endGroup()
 
     checked = []
@@ -166,9 +166,9 @@ describe 'a group', ->
     loadQueue.config simultaneous: 1
     loadQueue
       .startGroup()
-        .load('assets/1.png')
-          .then(-> complete.asset1 = true)
-        .load('assets/2.png')
+        .load 'assets/1.png'
+          .then -> complete.asset1 = true
+        .load 'assets/2.png'
           .then ->
             complete.asset2 = true
             unless complete.asset3
@@ -180,8 +180,8 @@ describe 'a group', ->
             else
               done new Error 'First group loaded first.'
       .startGroup()
-        .load('assets/3.png')
-          .then(-> complete.asset3 = true)
+        .load 'assets/3.png'
+          .then -> complete.asset3 = true
         .endGroup()
         .promote()
       .start()

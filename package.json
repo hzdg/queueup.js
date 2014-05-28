@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "mocha": "~1.13.0",
-    "coffee-script": "~1.6.3",
+    "coffee-script": "~1.7.1",
     "grunt": "~0.4.1",
     "grunt-cli": "~0.1.9",
     "grunt-contrib-coffee": "~0.7.0",
