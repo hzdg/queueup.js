@@ -26,6 +26,8 @@ describe 'a LoadResult', ->
     assert.typeOf loadResult.start, 'function'
   it 'should be chainable', ->
     assert.equal loadResult, loadResult.then $.noop
+  it 'has a default priority of 0', ->
+    assert.equal loadResult.priority(), 0
 
 
 describe 'a queue', ->
@@ -116,6 +118,21 @@ describe 'a queue', ->
       .load 'assets/1.png'
         .then -> done()
 
+  it 'abides by priority', (done) ->
+    complete = {}
+    loadQueue.config simultaneous: 1
+    loadQueue
+      .load 'assets/2.png'
+        .then ->
+          unless complete.asset1
+            done new Error 'First asset not loaded.'
+          done()
+      .load 'assets/1.png', priority: 1
+        .then ->
+          if complete.asset2
+            done new Error 'Second asset loaded first.'
+          complete.asset1 = true
+      .start()
 
 describe 'a group', ->
   loadQueue = null
