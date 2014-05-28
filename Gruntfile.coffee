@@ -46,6 +46,8 @@ module.exports = (grunt) ->
           log: true
           reporter: 'Spec'
           urls: ["http://localhost:#{ TEST_SERVER_PORT }/test/index.html"]
+          mocha:
+            grep: grunt.option 'grep'
     watch:
       options:
         atBegin: true
