@@ -1,68 +1,6 @@
     Promise = require './Promise'
     extend = require 'xtend/mutable'
 
-
-    class Deferred
-      constructor: (Promise) ->
-        unless Promise
-          throw new Error "Environment doesn't support Promises; you must provide a Promise option."
-        @promise = new Promise (a, b) => @resolve = a; @reject = b
-
-    EXT_RE = /\.([^.]+?)(\?.*)?$/
-
-    boundFns = (obj) ->
-      result = {}
-      for k, v of obj
-        if typeof v is 'function' and k[0] != '_'
-          do (v) ->
-            result[k] = (args...) -> v.apply obj, args
-      result
-
-The LoadResult is the result of calling `load()`. It implements a promise API.
-
-    class LoadResult
-      constructor: (loadQueue, @parent, deferred, @loadOptions) ->
-        extend this, boundFns(loadQueue)
-        {promise, resolve, reject} = deferred
-        for fn in ['then', 'catch']
-          do (fn) =>
-            @[fn] = (args...) ->
-              promise[fn] args...
-              this
-        @_resolve = (value) -> resolve value
-        @_reject = (reason) -> reject reason
-      promote: -> @parent._promote this
-      cancel: -> throw new Error 'not implemented'
-
-A Group is a type of LoadResult that groups other LoadResults.
-
-    class Group extends LoadResult
-      constructor: (loadQueue, parent, deferred) ->
-        super loadQueue, parent, deferred
-        @_group = []
-
-      append: (loadResult) -> @_group.push loadResult
-
-      prepend: (loadResult) -> @_group.unshift loadResult
-
-      next: ->
-        if @_group.length and @_group[0].next
-          # If next is a nested group, return its next item, if it has one.
-          return next if next = @_group[0].next()
-          # TODO: resolve nested group?
-          # If the nested group was empty, discard it and call next again.
-          @_group.shift()
-          return @next()
-        @_group.shift()
-
-      # Promote an asset in the group.
-      # If the asset is already at the 'head' or already loaded, this is a noop.
-      _promote: (loadResult) ->
-        if (index = @_group.indexOf loadResult) > 0
-          @_group.splice index, 1
-          @_group.unshift loadResult
-        loadResult
-
 The LoadQueue is the workhorse for queueup. It's the object responsible for
 managing the timing of the loading of assets.
 
@@ -173,9 +111,80 @@ managing the timing of the loading of assets.
         loader(opts, callback)
           ?.then? resultObj._resolve, resultObj._reject  # If a promise is returned, use it.
 
+The LoadResult is the result of calling `load()`. It implements a promise API.
+
+    class LoadResult
+      constructor: (loadQueue, @parent, deferred, @loadOptions) ->
+        extend this, boundFns(loadQueue)
+        {promise, resolve, reject} = deferred
+        for fn in ['then', 'catch']
+          do (fn) =>
+            @[fn] = (args...) ->
+              promise[fn] args...
+              this
+        @_resolve = (value) -> resolve value
+        @_reject = (reason) -> reject reason
+      promote: -> @parent._promote this
+      cancel: -> throw new Error 'not implemented'
+
+A Group is a type of LoadResult that groups other LoadResults.
+
+    class Group extends LoadResult
+      constructor: (loadQueue, parent, deferred) ->
+        super loadQueue, parent, deferred
+        @_group = []
+
+      append: (loadResult) -> @_group.push loadResult
+
+      prepend: (loadResult) -> @_group.unshift loadResult
+
+      next: ->
+        if @_group.length and @_group[0].next
+          # If next is a nested group, return its next item, if it has one.
+          return next if next = @_group[0].next()
+          # TODO: resolve nested group?
+          # If the nested group was empty, discard it and call next again.
+          @_group.shift()
+          return @next()
+        @_group.shift()
+
+      # Promote an asset in the group.
+      # If the asset is already at the 'head' or already loaded, this is a noop.
+      _promote: (loadResult) ->
+        if (index = @_group.indexOf loadResult) > 0
+          @_group.splice index, 1
+          @_group.unshift loadResult
+        loadResult
+
+
+Utilities
+---------
+
+A Deferred is a utility object for dealing with promises. It encapsulates a
+promise as well as `resolve`, and `reject` methods.
+
+    class Deferred
+      constructor: (Promise) ->
+        unless Promise
+          throw new Error "Environment doesn't support Promises; you must provide a Promise option."
+        @promise = new Promise (a, b) => @resolve = a; @reject = b
+
+This regular expression is used to extract extensions from a URL string.
+
+    EXT_RE = /\.([^.]+?)(\?.*)?$/
+
+Create a new object with bound versions of each of the functions of the provided
+object.
+
+    boundFns = (obj) ->
+      result = {}
+      for k, v of obj
+        if typeof v is 'function' and k[0] != '_'
+          do (v) ->
+            result[k] = (args...) -> v.apply obj, args
+      result
 
 The queueup module itself is a factory for other load queues.
-
 
     queueup = (args...) -> new LoadQueue args...
     queueup.LoadQueue = LoadQueue
