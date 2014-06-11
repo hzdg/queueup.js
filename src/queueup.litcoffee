@@ -67,22 +67,11 @@ managing the timing of the loading of assets.
         deferred.promise.then onItemDone, onItemDone
         loadResult = new LoadResult this, @_getGroup(), deferred, task, priority: opts?.priority
         @_getGroup().add loadResult
+        @_loadNext() if @_options.autostart
         loadResult
 
       load: (args...) ->
-        result = @_createLoadResult args...
-        @_loadNext() if @_options.autostart
-        result
-
-      start: ->
-        @_loadNext()
-        this
-
-      _createGroup: (parent) ->
-        deferred = new Deferred @_options.Promise
-        new Group this, parent, deferred
-
-      _createLoadResult: (urlOrOpts, opts) ->
+        [urlOrOpts, opts] = args
         opts =
           if typeof urlOrOpts is 'object'
             extend {}, urlOrOpts
@@ -98,6 +87,14 @@ managing the timing of the loading of assets.
           loader loaderOpts, cb
 
         resultObj = @enqueue task, queueOpts
+
+      start: ->
+        @_loadNext()
+        this
+
+      _createGroup: (parent) ->
+        deferred = new Deferred @_options.Promise
+        new Group this, parent, deferred
 
       _getGroup: ->
         @_currentGroup #?= @_createGroup @_queueGroup

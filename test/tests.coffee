@@ -112,10 +112,19 @@ describe 'a queue', ->
         .promote()
       .start()
 
-  it 'should autostart', (done) ->
+  it 'should autostart from load', (done) ->
     loadQueue.config autostart: true
     loadQueue
       .load 'assets/1.png'
+        .then -> done()
+
+  it 'should autostart from enqueue', (done) ->
+    loadQueue.config autostart: true
+    loader = (cb) ->
+      loader = loadQueue._getLoader type: 'image'
+      loader url: 'assets/1.png', cb
+    loadQueue
+      .enqueue loader
         .then -> done()
 
   it 'abides by priority', (done) ->
