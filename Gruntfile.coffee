@@ -53,7 +53,7 @@ module.exports = (grunt) ->
         atBegin: true
       coffee:
         files: ['src/**/*.?(lit)coffee', 'test/**/*.?(lit)coffee']
-        tasks: ['coffee']
+        tasks: ['build']
     bump:
       options:
         files: ['package.json', 'bower.json']
